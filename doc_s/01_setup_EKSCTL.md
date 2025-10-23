@@ -1,15 +1,21 @@
 ## Create a Cluster using EKSCTL
 
-Configure AWS CLI and use below variables
+# lazy to type name again and again then do this
+export cluster_name=demo-cluster
+export AWS_ClUSTER_REGION=ap-south-1
+export AWS_FARGATE_PROFILE="alb-sample-app"
 
-```bash
-export EKS_CLUSTER_NAME=eks-workshop
-export AWS_REGION=ap-south-1
-```
+# Create Cluster 
+eksctl create cluster --name $cluster_name --region ap-south-1 --fargate
 
-Run the EKS CTL to deploy using yml.
+# Update KubeCTL config from eks - this will enable you to use the EKS cluster using kubectl.
+aws eks update-kubeconfig --name $cluster_name --region ap-south-1
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/aws-samples/eks-workshop-v2/main/cluster/eksctl/cluster.yaml | \
-envsubst | eksctl create cluster -f -
-```
+# There are 2 ways to do the deployment
+#   # pay for EC2 Instances and Manage it Manually
+#   # Use Fargate <3 This smol containers shit - which is better and is tuned for HA.
+# This Example uses Fargate
+
+# Fargate Profile
+eksctl create fargateprofile --cluster $cluster_name --region $AWS_ClUSTER_REGION --name alb-sample-app --namespace game-2048
+
