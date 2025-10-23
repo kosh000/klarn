@@ -94,6 +94,29 @@ There are 3 ways to access a POD.
 - Node Port (_Exposing on Node Level, as we will deploy in private only ppl within the VPC will be able to access it_)
 - Load Balancer (_Exposing through the LB, yka_)
 
+## What is?
+
+- Namespace
+  - A Namespace partitions a single cluster so resource names only need to be unique within that namespace, enabling isolation, policy, and quota boundaries.​
+  - Most Kubernetes objects, including Deployments and Services, are namespaced; label selectors belong to those resources, not to the Namespace itself.
+  
+- Deployment
+  - A Deployment declares desired state for Pods indirectly via ReplicaSets, handling rolling updates, rollbacks, and self‑healing by recreating Pods.​
+  - Because Pods are ephemeral, Deployments give a higher‑level, declarative interface for versioned rollouts of your application.​
+
+- Service
+  - A Service abstracts a logical set of Pods and provides a stable virtual IP and DNS name, with endpoints tracked automatically (via EndpointSlices) as Pods change.​
+  - It targets Pods usually by label selector and can be exposed as ClusterIP (internal), NodePort, or LoadBalancer, depending on how you need to reach it.​
+  - Services are namespaced; cross‑namespace access uses DNS (svc.ns.svc.cluster.local) or a Service without selector plus Endpoints mapping, not a selector across namespaces.​
+
+- Ingress
+  - Ingress defines HTTP/HTTPS routing rules (host/path, TLS) that route external traffic to Services inside the cluster and must be fulfilled by an Ingress controller.​
+  - Ingress is stable, but new features are moving to the Gateway API; if you use Ingress, review your controller’s specifics since behavior varies.​
+
+- EKS nuance
+  - On EKS, an Ingress only takes effect when an Ingress controller (commonly the AWS Load Balancer Controller) is present to provision ALB/NLB and program routes to Services.​
+  - If exposing a single backend, a Service of type LoadBalancer is straightforward; Ingress is preferred when routing multiple Services under one hostname or IP.​
+
 ## Notes
 
 Exposing Pods or SVC or Ingress:
