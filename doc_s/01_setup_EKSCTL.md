@@ -6,10 +6,10 @@ export AWS_ClUSTER_REGION=ap-south-1
 export AWS_FARGATE_PROFILE="alb-sample-app"
 
 # Create Cluster 
-eksctl create cluster --name $cluster_name --region ap-south-1 --fargate
+eksctl create cluster --name $cluster_name --region $AWS_ClUSTER_REGION --fargate
 
 # Update KubeCTL config from eks - this will enable you to use the EKS cluster using kubectl.
-aws eks update-kubeconfig --name $cluster_name --region ap-south-1
+aws eks update-kubeconfig --name $cluster_name --region $AWS_ClUSTER_REGION
 
 # There are 2 ways to do the deployment
 ##### pay for EC2 Instances and Manage it Manually
@@ -17,7 +17,7 @@ aws eks update-kubeconfig --name $cluster_name --region ap-south-1
 # This Example uses Fargate
 
 # Fargate Profile
-eksctl create fargateprofile --cluster $cluster_name --region $AWS_ClUSTER_REGION --name alb-sample-app --namespace game-2048
+eksctl create fargateprofile --cluster $cluster_name --region $AWS_ClUSTER_REGION --name $AWS_FARGATE_PROFILE --namespace game-2048
 
 # Create the 2048 App on EKS.
 #   # This is going to create several things.
@@ -29,3 +29,10 @@ eksctl create fargateprofile --cluster $cluster_name --region $AWS_ClUSTER_REGIO
 # Running below will deploy the right config as mentioned above for the game.
 kubectl apply -f kube_files/2048_full.yaml
 
+# KubeCTL Commands
+kubectl get endpoints -n game-2048
+kubectl get pods -n game-2048
+kubectl get deployments.apps -n game-2048
+kubectl get svc -n game-2048
+kubectl get ingress -n game-2048
+kubectl get namespaces
