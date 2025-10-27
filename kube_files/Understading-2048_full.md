@@ -56,12 +56,12 @@
 - backend: service: name: service-2048 selects the Service as the backend target.[12]
 - backend: service: port: number: 80 forwards to the Service’s port 80.[12]
 
-### Relationships and traffic flow
+## Relationships and traffic flow
 - Namespace scopes all three resources so their names only need to be unique within game-2048.[10]
 - Deployment creates and maintains three Pods labeled app.kubernetes.io/name=app-2048.[1]
 - Service service-2048 selects those Pods by label and exposes them inside the cluster (ClusterIP) and via NodePort on every node.[11]
 - Ingress ingress-2048 (class alb) uses the AWS Load Balancer Controller to provision an ALB and route external HTTP traffic to service-2048.[13][15][12]
 
-### EKS‑specific notes for this Ingress
+## EKS‑specific notes for this Ingress
 - With target-type: ip, the ALB targets Pod IPs behind the Service; a ClusterIP Service is sufficient and NodePort is not required for this mode.[14][13]
 - The internet-facing scheme makes the ALB public; use private for internal‑only exposure.[13][14]
