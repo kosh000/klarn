@@ -39,6 +39,10 @@ eksctl utils associate-iam-oidc-provider --cluster $cluster_name --approve --pro
 
 Note: AWSLoadBalancerControllerIAMPolicy, has to be this name only
 
+NOTE: Download policy by below - check for updates. just replace the version.
+
+curl -O https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.14.1/docs/install/iam_policy.json
+
 aws iam create-policy \
     --policy-name AWSLoadBalancerControllerIAMPolicy \
     --policy-document file://iam_policy.json --profile abhinav
@@ -66,7 +70,8 @@ helm install aws-load-balancer-controller eks/aws-load-balancer-controller -n ku
   --set vpcId=vpc-043518b37b5c17a64
 
 # KubeCTL Commands
-Note: get, describe, edit, exec (pods), 
+Note: get, describe, edit, exec (pods), -A Flag mostly works on everything for "all".
+
 kubectl get endpoints -n <namespace>
 kubectl get pods -n <namespace>
 kubectl get deployments -n <namespace>
@@ -83,3 +88,4 @@ kubectl delete deploy deployment-2048 -n <namespace>
 kubectl get hpa
 kubectl describe hpa
 kubectl get node
+kubectl get serviceaccounts
