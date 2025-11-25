@@ -6,6 +6,7 @@ export cluster_name=demo-cluster
 export AWS_ClUSTER_REGION=ap-south-1
 export AWS_FARGATE_PROFILE="alb-sample-app"
 export VPC_ID_EKS="vpc-0150c3faaf19af0f8"
+export VPC_CIDR=$(aws ec2 describe-vpcs --vpc-ids $VPC_ID --query "Vpcs[0].CidrBlock" --output text --profile abhinav)
 ```
 # Create Cluster 
 ```bash
