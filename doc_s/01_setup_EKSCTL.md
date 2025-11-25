@@ -5,7 +5,7 @@
 export cluster_name=demo-cluster
 export AWS_ClUSTER_REGION=ap-south-1
 export AWS_FARGATE_PROFILE="alb-sample-app"
-export VPC_ID_EKS=""
+export VPC_ID_EKS="vpc-0150c3faaf19af0f8"
 ```
 # Create Cluster 
 ```bash
@@ -86,7 +86,22 @@ helm install aws-load-balancer-controller eks/aws-load-balancer-controller -n ku
   --set region=$AWS_ClUSTER_REGION \
   --set vpcId=$VPC_ID_EKS
 ```
+# Metrics Servers will fail on Farge
 
+The Taint on metrics server doesnt let it run so you have to make it available for fargate.
+
+```bash
+kubectl patch deployment metrics-server -n kube-system --type=merge --patch='
+spec:
+  template:
+    spec:
+      tolerations:
+      - key: "eks.amazonaws.com/compute-type"
+        operator: "Equal"
+        value: "fargate"
+        effect: "NoSchedule"
+'
+```
 # KubeCTL Commands
 Note: get, describe, edit, exec (pods), -A Flag mostly works on everything for "all".
 
