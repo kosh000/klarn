@@ -71,3 +71,6 @@ export FILE_SYSTEM_ID=$(aws efs create-file-system \
 
 echo $FILE_SYSTEM_ID
 ```
+
+* Adding PV and PVC
+kubectl apply -f kube_files/6_efs_storage.yaml
