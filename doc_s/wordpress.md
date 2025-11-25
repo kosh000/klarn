@@ -75,6 +75,10 @@ echo $FILE_SYSTEM_ID
 * Adding PV and PVC
 kubectl apply -f kube_files/6_efs_storage.yaml
 
-# Updated App with PV and PVC
+# Updated DB with PV and PVC
 
 kubectl apply -f kube_files/7_mysql_stateful.yaml
+
+# Update AppSite with PV and PVC
+
+kubectl apply -f kube_files/8_wordpress_stateful.yaml
