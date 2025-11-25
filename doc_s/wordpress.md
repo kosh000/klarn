@@ -13,7 +13,7 @@ eksctl create fargateprofile \
 
 Reference the file please.
 ```bash
-eksctl create fargateprofile -f kube_files/1_wordpress_eksctl_namespaces.yml --profile abhinav
+eksctl create fargateprofile -f kube_files/1_wordpress_eksctl_namespaces.yaml --profile abhinav
 ```
 # Apply the Wordpress Config
 
