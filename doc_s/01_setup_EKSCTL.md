@@ -18,10 +18,10 @@ eksctl create cluster --name $cluster_name --region $AWS_ClUSTER_REGION --fargat
 aws eks update-kubeconfig --name $cluster_name --region $AWS_ClUSTER_REGION --profile abhinav
 ```
 
-# There are 2 ways to do the deployment
-##### pay for EC2 Instances and Manage it Manually
-##### Use Fargate <3 This smol containers shit - which is better and is tuned for HA.
-# This Example uses Fargate
+* There are 2 ways to do the deployment
+  * pay for EC2 Instances and Manage it Manually
+  * Use Fargate <3 This smol containers shit - which is better and is tuned for HA.
+* This Example uses Fargate
 
 # Fargate Profile
 ```bash

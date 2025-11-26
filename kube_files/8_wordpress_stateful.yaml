@@ -13,9 +13,24 @@ spec:
       labels:
         app: wordpress
     spec:
+      initContainers:
+      - name: init-sites-volume
+        image: wordpress:latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-c"]
+        args: ["cp -rn /usr/src/wordpress/* /var/www/html/ && chown -R 33:33 /var/www/html"]
+        volumeMounts:
+        - name: efs-storage
+          mountPath: /var/www/html
+          subPath: wordpress
+      # -----------------------------------
       containers:
       - name: wordpress
         image: wordpress:latest
+        resources:
+          requests:
+            cpu: "2000m"
+            memory: "2048Mi"
         env:
         - name: WORDPRESS_DB_HOST
           value: wordpress-mysql
@@ -30,7 +45,6 @@ spec:
           value: wordpress
         ports:
         - containerPort: 80
-        # MOUNTING THE VOLUME HERE
         volumeMounts:
         - name: efs-storage
           mountPath: /var/www/html
