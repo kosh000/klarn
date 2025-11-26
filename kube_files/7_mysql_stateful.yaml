@@ -19,8 +19,8 @@ spec:
         name: mysql
         resources:
           requests:
-            cpu: "2000m"
-            memory: "2048Mi"
+            cpu: "1000m"
+            memory: "1700Mi"
         env:
         - name: MYSQL_ROOT_PASSWORD
           valueFrom:
