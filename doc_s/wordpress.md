@@ -82,3 +82,9 @@ kubectl apply -f kube_files/7_mysql_stateful.yaml
 # Update AppSite with PV and PVC
 
 kubectl apply -f kube_files/8_wordpress_stateful.yaml
+
+# Added HPA
+
+kubectl apply -f kube_files/9_wordpress_hpa.yaml
+
+* For HPA, this file has minimum value which overwrites the minimum in deployment.
