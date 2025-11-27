@@ -23,18 +23,24 @@ kubectl apply -f kube_files/2_wordpress_full.yaml
 
 # Create Secrets for the Databse
 
+```bash
 kubectl apply -f kube_files/3_mysql_secret.yaml
+```
 
 # Created Mysql Deployment
 
+```bash
 kubectl apply -f kube_files/4_mysql_deployment.yaml
+```
 
 # Created ROLLING UPDATE FILE
 
 * This updates the existing deployment of wordpress with the env variables
   * Host as `Service Name`
   * Username and Password for the wordpress from `Secret`.
+```bash
 kubectl apply -f kube_files/5_wordpress_update.yaml
+```
 
 # Creating Storage for Apps
 
@@ -73,18 +79,26 @@ echo $FILE_SYSTEM_ID
 ```
 
 * Adding PV and PVC
+```bash
 kubectl apply -f kube_files/6_efs_storage.yaml
+```
 
 # Updated DB with PV and PVC
 
+```bash
 kubectl apply -f kube_files/7_mysql_stateful.yaml
+```
 
 # Update AppSite with PV and PVC
 
+```bash
 kubectl apply -f kube_files/8_wordpress_stateful.yaml
+```
 
 # Added HPA
 
+```bash
 kubectl apply -f kube_files/9_wordpress_hpa.yaml
+```
 
 * For HPA, this file has minimum value which overwrites the minimum in deployment.
