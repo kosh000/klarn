@@ -1,0 +1,117 @@
+---
+inclusion: always
+---
+
+# EKS Mastery Learning Roadmap
+
+## Philosophy
+
+Learn by doing first, then understanding why. Each stage follows:
+1. **Do it** — get something working, see the result
+2. **Understand it** — learn what happened under the hood
+3. **Break it** — intentionally cause failures to learn troubleshooting
+4. **Best practices** — learn the production-grade way
+
+## Current Stack (2026)
+
+| Component | Tool | Why |
+|-----------|------|-----|
+| Kubernetes | v1.35 on EKS (upstream at v1.36) | Latest stable on EKS |
+| Cluster creation | eksctl → Terraform | Fast start, then production IaC |
+| Node scaling | Karpenter | Default recommendation, replaces Cluster Autoscaler |
+| Pod IAM | EKS Pod Identity | Simpler than IRSA, new default |
+| GitOps | ArgoCD | Best UI, broad adoption, CNCF Graduated |
+| Packaging | Helm + Kustomize | Helm for charts, Kustomize for overlays |
+| Monitoring | Prometheus + Grafana | Kubernetes-native, portable |
+| Logging | Fluent Bit → CloudWatch / Loki | AWS-native + Grafana integration |
+| Tracing | OpenTelemetry → X-Ray / Jaeger | Vendor-neutral standard |
+| Ingress | AWS Load Balancer Controller | EKS-native, ALB/NLB |
+| Security policy | Pod Security Admission + Kyverno | Built-in + simple policy engine |
+| Secrets | External Secrets Operator + AWS Secrets Manager | Production-grade |
+| Container runtime | containerd | Default since K8s 1.24 (Docker shim removed) |
+
+## Stage Map
+
+### Stage 0: Prerequisites
+Linux fundamentals, networking, YAML, AWS basics (IAM, VPC, EC2)
+
+### Stage 1: Docker & Containers
+Containers from scratch, Dockerfiles, images, registries, Docker Compose
+
+### Stage 2: Kubernetes Core Concepts
+Architecture, control plane, data plane, core objects, kubectl, local cluster (kind)
+
+### Stage 3: EKS Cluster Setup (EC2 Managed Nodes)
+eksctl cluster creation, deploy first workload, explore nodes, understand what was created
+
+### Stage 4: Workloads & Application Lifecycle
+Deployments, ConfigMaps, Secrets, probes, resource management, Jobs
+
+### Stage 5: Networking & Ingress
+Services, Ingress, ALB Controller, ExternalDNS, CoreDNS, Network Policies
+
+### Stage 6: Security
+RBAC, Pod Identity, Pod Security Standards, Kyverno, secrets management
+
+### Stage 7: Storage & Stateful Workloads
+PV/PVC, EBS CSI, EFS CSI, StatefulSets, running databases on EKS
+
+### Stage 8: Scheduling & Autoscaling
+Affinity, taints, tolerations, HPA, VPA, Karpenter, spot instances
+
+### Stage 9: Observability
+Prometheus, Grafana, Fluent Bit, OpenTelemetry, alerting
+
+### Stage 10: CI/CD & GitOps
+Helm, Kustomize, ArgoCD, CI pipelines, progressive delivery
+
+### Stage 11: Infrastructure as Code
+Terraform for EKS, modules, state management, production cluster setup
+
+### Stage 12: Production Operations
+Upgrades, backup (Velero), cost optimization, chaos engineering, troubleshooting
+
+### Stage 13: Advanced & Serverless
+Fargate, EKS Auto Mode, Hybrid Nodes, service mesh, custom operators
+
+## Progress Tracking
+
+- [ ] Stage 0: Prerequisites
+- [ ] Stage 1: Docker & Containers
+- [ ] Stage 2: Kubernetes Core Concepts
+- [ ] Stage 3: EKS Cluster Setup
+- [ ] Stage 4: Workloads & Application Lifecycle
+- [ ] Stage 5: Networking & Ingress
+- [ ] Stage 6: Security
+- [ ] Stage 7: Storage & Stateful Workloads
+- [ ] Stage 8: Scheduling & Autoscaling
+- [ ] Stage 9: Observability
+- [ ] Stage 10: CI/CD & GitOps
+- [ ] Stage 11: Infrastructure as Code
+- [ ] Stage 12: Production Operations
+- [ ] Stage 13: Advanced & Serverless
+
+## Documentation Rules (STRICT)
+
+1. **Verify facts** — before documenting anything technical, look it up on the internet to confirm it's accurate and current (2026).
+2. **Learning journal** — every session, document what was learned, what was attempted, what failed, and what was corrected. File: `docs/journal/learning-journal.md`
+3. **Timeline format** — entries are chronological with timestamps. Never delete old entries.
+4. **Corrections** — if the learner had a wrong understanding, document:
+   - What they thought (the misconception)
+   - What is actually correct (with source/reason)
+   - Why the misconception is wrong
+5. **Document as much as possible** — err on the side of over-documenting. Every insight, every mistake, every fix.
+6. **Append-only** — the journal is a living history. Old entries stay forever.
+7. **Auto-assess every prompt** — for EVERY message the learner sends, assess whether it contains something documentable (a question asked, a concept discussed, a mistake made, a correction given, a decision taken, progress made). If yes, update `docs/journal/learning-journal.md` directly and automatically. Do NOT ask permission — just do it. The learner is relying on this.
+
+## Notes
+
+- Add your own notes, links, and discoveries below as you progress
+- Each stage has its own steering file and reference doc
+- Labs are embedded in each stage's steering file
+
+---
+
+## Your Notes
+
+(Add anything here as you learn)
