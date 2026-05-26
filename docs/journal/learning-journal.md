@@ -212,3 +212,19 @@ Compared roadmap.sh topics against all 14 stages. Identified 13 missing/underrep
 ---
 
 (Next entries will be added as learning progresses)
+
+### 2026-05-26 — Stage 0 Begins + Session Flow Decision
+
+**Context:** Learner starting Stage 0 (Prerequisites). Before diving in, established the preferred learning flow.
+
+**Decision Made:**
+- Learning flow: **Concepts first, then labs** (one topic at a time)
+- Added to master roadmap steering as "Session Flow (STRICT)" rule
+- This overrides the original "do it first" philosophy for the teaching interaction — concepts are discussed first, then practiced in labs after
+
+**What was done:**
+- Updated `00-eks-master-roadmap.md` with Session Flow section
+- Stage 0 officially started
+
+---
+
