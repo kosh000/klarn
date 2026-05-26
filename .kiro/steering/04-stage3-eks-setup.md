@@ -1,5 +1,6 @@
 ---
 inclusion: manual
+description: "Stage 3: EKS Cluster Setup — eksctl, managed nodes, first workload deployment"
 ---
 
 # Stage 3: EKS Cluster Setup (EC2 Managed Nodes)

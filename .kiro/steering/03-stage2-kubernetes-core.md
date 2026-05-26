@@ -1,5 +1,6 @@
 ---
 inclusion: manual
+description: "Stage 2: Kubernetes Core Concepts — architecture, control plane, core objects, kubectl"
 ---
 
 # Stage 2: Kubernetes Core Concepts

@@ -1,5 +1,6 @@
 ---
 inclusion: manual
+description: "Stage 13: Advanced & Serverless — Fargate, EKS Auto Mode, service mesh, custom operators"
 ---
 
 # Stage 13: Advanced & Serverless

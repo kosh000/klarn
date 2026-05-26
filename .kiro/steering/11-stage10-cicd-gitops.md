@@ -1,5 +1,6 @@
 ---
 inclusion: manual
+description: "Stage 10: CI/CD & GitOps — Helm, Kustomize, ArgoCD, CI pipelines"
 ---
 
 # Stage 10: CI/CD & GitOps

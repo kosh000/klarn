@@ -1,5 +1,6 @@
 ---
 inclusion: manual
+description: "Stage 8: Scheduling & Autoscaling — affinity, taints, HPA, VPA, Karpenter"
 ---
 
 # Stage 8: Scheduling & Autoscaling

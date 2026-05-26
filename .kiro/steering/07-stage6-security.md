@@ -1,5 +1,6 @@
 ---
 inclusion: manual
+description: "Stage 6: Security — RBAC, Pod Identity, Pod Security Standards, Kyverno"
 ---
 
 # Stage 6: Security

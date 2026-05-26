@@ -1,5 +1,6 @@
 ---
 inclusion: manual
+description: "Stage 5: Networking & Ingress — Services, ALB Controller, ExternalDNS, Network Policies"
 ---
 
 # Stage 5: Networking & Ingress

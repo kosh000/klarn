@@ -1,5 +1,6 @@
 ---
 inclusion: manual
+description: "Stage 12: Production Operations — upgrades, backup, cost optimization, chaos engineering"
 ---
 
 # Stage 12: Production Operations

@@ -1,5 +1,6 @@
 ---
 inclusion: auto
+description: AWS CLI profile configuration — enforces --profile eks-learning on all AWS commands
 ---
 
 # AWS CLI Profile: eks-learning

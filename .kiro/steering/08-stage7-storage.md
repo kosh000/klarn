@@ -1,5 +1,6 @@
 ---
 inclusion: manual
+description: "Stage 7: Storage & Stateful Workloads — PV/PVC, EBS CSI, EFS CSI, StatefulSets"
 ---
 
 # Stage 7: Storage & Stateful Workloads

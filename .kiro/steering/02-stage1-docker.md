@@ -1,5 +1,6 @@
 ---
 inclusion: manual
+description: "Stage 1: Docker & Containers — Dockerfiles, images, registries, Docker Compose"
 ---
 
 # Stage 1: Docker & Containers

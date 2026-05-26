@@ -1,5 +1,6 @@
 ---
 inclusion: manual
+description: "Stage 4: Workloads & Application Lifecycle — Deployments, ConfigMaps, Secrets, probes"
 ---
 
 # Stage 4: Workloads & Application Lifecycle

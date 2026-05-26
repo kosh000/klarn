@@ -1,5 +1,6 @@
 ---
 inclusion: manual
+description: "Stage 11: Infrastructure as Code — Terraform for EKS, modules, state management"
 ---
 
 # Stage 11: Infrastructure as Code (Terraform)

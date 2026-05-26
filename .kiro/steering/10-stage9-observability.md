@@ -1,5 +1,6 @@
 ---
 inclusion: manual
+description: "Stage 9: Observability — Prometheus, Grafana, Fluent Bit, OpenTelemetry"
 ---
 
 # Stage 9: Observability
