@@ -382,6 +382,177 @@ spec:
 
 ## Secrets Management (Production-Grade)
 
+### ServiceAccount Token Security
+
+By default, every pod gets a ServiceAccount token mounted at `/var/run/secrets/kubernetes.io/serviceaccount/token`. This token can be used to call the Kubernetes API.
+
+**Problem:** Most pods don't need API access. A compromised pod with a mounted token can enumerate the cluster.
+
+**Best practice:** Disable automatic token mounting for pods that don't need it:
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: my-app-sa
+automountServiceAccountToken: false   # Don't mount token by default
+---
+# Or per-pod:
+apiVersion: apps/v1
+kind: Deployment
+spec:
+  template:
+    spec:
+      serviceAccountName: my-app-sa
+      automountServiceAccountToken: false  # Override at pod level
+```
+
+**When you DO need API access** (e.g., operators, controllers), use projected volumes with short-lived tokens:
+
+```yaml
+spec:
+  containers:
+    - name: my-controller
+      volumeMounts:
+        - name: token
+          mountPath: /var/run/secrets/tokens
+  volumes:
+    - name: token
+      projected:
+        sources:
+          - serviceAccountToken:
+              path: token
+              expirationSeconds: 3600    # 1 hour, auto-rotated
+              audience: "https://kubernetes.default.svc"
+```
+
+Projected tokens are short-lived (auto-expire and rotate) vs the default token which never expires.
+
+### Container Image Security (Trivy)
+
+Before deploying images, scan them for known vulnerabilities:
+
+```bash
+# Scan a local image
+trivy image my-app:v1
+
+# Scan with severity filter
+trivy image --severity HIGH,CRITICAL my-app:v1
+
+# Scan in CI pipeline (fail build on critical CVEs)
+trivy image --exit-code 1 --severity CRITICAL my-app:v1
+
+# Scan a remote image from ECR
+trivy image 123456789.dkr.ecr.us-east-1.amazonaws.com/my-app:v1
+```
+
+**Integrate in CI pipeline (GitHub Actions):**
+```yaml
+- name: Scan image for vulnerabilities
+  uses: aquasecurity/trivy-action@master
+  with:
+    image-ref: ${{ env.ECR_REPO }}:${{ github.sha }}
+    format: 'table'
+    exit-code: '1'
+    severity: 'CRITICAL,HIGH'
+```
+
+**Enforce in cluster with Kyverno:**
+```yaml
+# Block images that haven't been scanned or have critical CVEs
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-image-from-ecr
+spec:
+  validationFailureAction: Enforce
+  rules:
+    - name: only-ecr-images
+      match:
+        any:
+          - resources:
+              kinds: ["Pod"]
+      validate:
+        message: "Images must come from our ECR registry"
+        pattern:
+          spec:
+            containers:
+              - image: "123456789.dkr.ecr.*.amazonaws.com/*"
+```
+
+**Best practices for image security:**
+- Scan in CI (block vulnerable images from being deployed)
+- Use minimal base images (Alpine, distroless) — fewer packages = fewer CVEs
+- Pin image digests in production (not just tags — tags can be overwritten)
+- Regularly rebuild images to pick up base image security patches
+- Use ECR image scanning (automatic on push)
+
+### cert-manager (TLS Certificate Automation)
+
+On EKS, you use ACM (AWS Certificate Manager) for free TLS certs. On bare metal or non-AWS environments, **cert-manager** automates certificate issuance and renewal.
+
+```bash
+# Install cert-manager
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.0/cert-manager.yaml
+
+# Or via Helm
+helm repo add jetstack https://charts.jetstack.io
+helm install cert-manager jetstack/cert-manager \
+  --namespace cert-manager --create-namespace \
+  --set crds.enabled=true
+```
+
+**Set up Let's Encrypt issuer:**
+```yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@example.com
+    privateKeySecretRef:
+      name: letsencrypt-prod-key
+    solvers:
+      - http01:
+          ingress:
+            ingressClassName: envoy    # Or your gateway class
+      - dns01:
+          route53:
+            region: us-east-1          # For wildcard certs on AWS
+```
+
+**Request a certificate:**
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: api-tls
+  namespace: default
+spec:
+  secretName: api-tls-secret       # K8s Secret created with cert + key
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - api.example.com
+    - "*.api.example.com"
+  duration: 2160h                   # 90 days
+  renewBefore: 360h                 # Renew 15 days before expiry
+```
+
+cert-manager automatically renews certificates before they expire. The resulting Secret can be referenced in Gateway API or Ingress resources.
+
+**When to use what:**
+
+| Environment | TLS Solution | Cost |
+|-------------|-------------|------|
+| EKS (AWS) | ACM (via ALB annotation) | Free |
+| On-prem / bare-metal | cert-manager + Let's Encrypt | Free |
+| Internal services (mTLS) | cert-manager + self-signed CA | Free |
+| Enterprise (compliance) | cert-manager + Venafi/DigiCert | Paid |
+
 ### External Secrets Operator + AWS Secrets Manager
 
 ```bash
@@ -486,6 +657,11 @@ Now your secrets live in AWS Secrets Manager (encrypted, audited, rotatable) and
 13. A pod needs to read from S3 and write to DynamoDB. Should you give it `AdministratorAccess`? What should you do instead?
 14. What's the difference between `enforce`, `warn`, and `audit` modes in Pod Security Standards?
 15. You have a ServiceAccount with no RBAC bindings. Can a pod using it still make API calls to the Kubernetes API server?
+16. What's `automountServiceAccountToken: false`? Why should most pods have this set?
+17. What's the difference between the default ServiceAccount token and a projected token with `expirationSeconds`? Which is more secure?
+18. You run `trivy image my-app:v1` and find 3 CRITICAL CVEs. What should you do? Can you enforce this in the cluster?
+19. What's cert-manager? When would you use it instead of ACM?
+20. You deploy cert-manager with a Let's Encrypt ClusterIssuer. A Certificate resource requests `api.example.com`. What happens automatically?
 
 ## Checklist Before Moving On
 
@@ -500,3 +676,8 @@ Now your secrets live in AWS Secrets Manager (encrypted, audited, rotatable) and
 - [ ] Can set up External Secrets Operator with AWS Secrets Manager
 - [ ] Understand the principle of least privilege in Kubernetes
 - [ ] Know how EKS access entries work (IAM → K8s RBAC mapping)
+- [ ] Know when and how to disable automountServiceAccountToken
+- [ ] Understand projected ServiceAccount tokens (short-lived, auto-rotated)
+- [ ] Can scan container images with Trivy and integrate into CI
+- [ ] Can install and configure cert-manager for TLS automation
+- [ ] Know when to use ACM (EKS) vs cert-manager (on-prem)

@@ -26,6 +26,8 @@
 - [Kubernetes Gateway API Docs](https://gateway-api.sigs.k8s.io/)
 - [Envoy Gateway Docs](https://gateway.envoyproxy.io/)
 - [MetalLB Docs](https://metallb.io/)
+- [cert-manager Docs](https://cert-manager.io/docs/)
+- [Trivy Docs](https://aquasecurity.github.io/trivy/)
 
 ## Current Versions (May 2026)
 
@@ -43,6 +45,8 @@
 | Envoy Gateway | 1.8+ | Recommended Ingress NGINX replacement (on-prem) |
 | MetalLB | 0.14+ | Bare-metal LoadBalancer IP assignment |
 | AWS LB Controller | 3.x | GA Gateway API support |
+| cert-manager | 1.16+ | TLS automation (Let's Encrypt, self-signed) |
+| Trivy | 0.58+ | Container image vulnerability scanning |
 
 ## Key 2026 Changes to Be Aware Of
 

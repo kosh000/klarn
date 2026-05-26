@@ -367,6 +367,43 @@ On EKS, this happens automatically via the node group's launch template and the 
 - Architecture decisions: knowing what EKS hides helps you evaluate alternatives
 - Interviews: self-managed cluster knowledge is commonly tested
 
+### etcd Backup and Restore (What EKS Hides)
+
+On EKS, AWS handles etcd completely — multi-AZ replication, automatic backups, encryption. But understanding etcd operations is essential for CKA certification and for debugging.
+
+**What is etcd?**
+A distributed key-value store that holds ALL cluster state — every Deployment, Pod, Service, Secret, ConfigMap. If etcd is lost and there's no backup, the cluster is gone.
+
+**Backup (on self-managed clusters):**
+```bash
+# Snapshot etcd
+ETCDCTL_API=3 etcdctl snapshot save /backup/etcd-snapshot.db \
+  --endpoints=https://127.0.0.1:2379 \
+  --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+  --cert=/etc/kubernetes/pki/etcd/server.crt \
+  --key=/etc/kubernetes/pki/etcd/server.key
+
+# Verify snapshot
+ETCDCTL_API=3 etcdctl snapshot status /backup/etcd-snapshot.db --write-table
+```
+
+**Restore:**
+```bash
+# Stop kube-apiserver (so nothing writes to etcd during restore)
+# Restore from snapshot
+ETCDCTL_API=3 etcdctl snapshot restore /backup/etcd-snapshot.db \
+  --data-dir=/var/lib/etcd-restored
+
+# Update etcd config to use new data directory
+# Restart etcd and kube-apiserver
+```
+
+**Why this matters for EKS users:**
+- Velero backs up Kubernetes resources (YAML), not etcd directly
+- If you ever run hybrid (EKS + on-prem), you need to understand etcd for the on-prem part
+- CKA exam tests etcd backup/restore
+- Understanding etcd helps you understand why the API server is the single point of truth
+
 ### Custom Resource Definition (CRD)
 ```yaml
 apiVersion: apiextensions.k8s.io/v1

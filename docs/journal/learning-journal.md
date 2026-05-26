@@ -299,3 +299,70 @@ Compared roadmap.sh topics against all 14 stages. Identified 13 missing/underrep
 **Key insight documented:** The Gateway API's portability is the real win — an HTTPRoute written for EKS works unchanged on bare metal with Envoy Gateway. Only the GatewayClass and Gateway (infra layer) change between environments. App developers write the same routing rules everywhere.
 
 ---
+
+### 2026-05-26 — Gap Fix #2: Missing Core K8s Concepts (CKA/CKAD Coverage)
+
+**Context:** After fixing the app exposure gap, performed a comprehensive cross-reference of the entire 14-stage curriculum against CKA/CKAD exam domains, roadmap.sh/kubernetes, and 2026 best practices. Identified 7 additional missing topics.
+
+**Method:** Extracted every concept from all 15 steering files, then searched for gaps against:
+- CKA exam domains (cluster architecture 25%, workloads 15%, services/networking 20%, storage 10%, troubleshooting 30%)
+- CKAD exam domains (app design 20%, deployment 20%, environment/config/security 25%, services/networking 20%)
+- roadmap.sh/kubernetes community roadmap
+- Industry best practices for production Kubernetes
+
+**Gaps Found and Fixed:**
+
+1. **Multi-container pod patterns** (Stage 4) — HIGH priority
+   - Sidecar pattern (log shipping, metrics, TLS proxy)
+   - Ambassador pattern (database proxy, API gateway)
+   - Adapter pattern (log/metrics format conversion)
+   - Full YAML examples for each pattern
+   - Native Sidecar Containers API (K8s 1.28+, restartPolicy: Always)
+   - Why native sidecars fix the Job completion problem
+
+2. **ResourceQuota & LimitRange** (Stage 4) — HIGH priority
+   - ResourceQuota: namespace-level caps (CPU, memory, pod count, PVC count)
+   - LimitRange: per-container defaults, min/max bounds
+   - How they work together for multi-tenancy
+   - Production pattern example (team-a vs team-b quotas)
+   - Note: when ResourceQuota is set, ALL pods must specify requests/limits
+
+3. **ServiceAccount token security** (Stage 6) — MEDIUM priority
+   - automountServiceAccountToken: false (disable for most pods)
+   - Projected volumes with short-lived tokens (expirationSeconds)
+   - Default token vs projected token security comparison
+   - When you DO need API access (operators, controllers)
+
+4. **Container image scanning with Trivy** (Stage 6) — MEDIUM priority
+   - CLI usage (scan local, remote, severity filter)
+   - CI pipeline integration (GitHub Actions example)
+   - Cluster enforcement with Kyverno (restrict to ECR images)
+   - Best practices (minimal base images, pin digests, rebuild regularly)
+
+5. **cert-manager** (Stage 6) — MEDIUM priority
+   - Installation (kubectl apply or Helm)
+   - ClusterIssuer with Let's Encrypt (HTTP-01 and DNS-01 solvers)
+   - Certificate resource (auto-renewal, secretName)
+   - Decision table: ACM (EKS) vs cert-manager (on-prem) vs enterprise CAs
+
+6. **etcd backup/restore** (Stage 13) — LOW priority (EKS handles it)
+   - What etcd stores (ALL cluster state)
+   - etcdctl snapshot save/restore commands
+   - Why it matters for EKS users (CKA exam, hybrid clusters, debugging understanding)
+
+7. **Native Sidecar Containers API** (Stage 4) — LOW priority
+   - K8s 1.28+ feature (GA in 1.29)
+   - restartPolicy: Always on initContainers
+   - Solves Job completion problem with sidecars
+   - Proper startup/shutdown ordering
+
+**Self-test questions added:** 5 new (Stage 4) + 5 new (Stage 6) = 10 total
+**Checklist items added:** 5 new (Stage 4) + 5 new (Stage 6) = 10 total
+**Learning resources updated:** cert-manager docs, Trivy docs, version entries
+
+**What was NOT added (intentionally):**
+- etcd backup is covered conceptually but not as a lab (EKS handles it, and we don't have a self-managed cluster)
+- OPA/Gatekeeper not added (Kyverno is the chosen tool, OPA is more complex and less recommended for beginners)
+- Pod Security Policies not added (removed in K8s 1.25, replaced by Pod Security Admission which is already covered)
+
+---

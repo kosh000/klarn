@@ -414,6 +414,193 @@ spec:
 
 Init containers run sequentially. Main container only starts after ALL init containers succeed.
 
+## Multi-Container Pod Patterns
+
+A pod can have multiple containers that share the same network (localhost) and storage volumes. There are four established patterns:
+
+### Sidecar Pattern
+A helper container that extends the main container's functionality without modifying it.
+
+```yaml
+spec:
+  containers:
+    - name: my-app
+      image: my-app:v1
+      ports:
+        - containerPort: 8080
+    - name: log-shipper          # Sidecar: ships logs to central system
+      image: fluent-bit:3.0
+      volumeMounts:
+        - name: logs
+          mountPath: /var/log/app
+  volumes:
+    - name: logs
+      emptyDir: {}
+```
+
+**Use cases:** log shipping, metrics collection, TLS proxy (Envoy/Istio sidecar), file sync
+
+### Ambassador Pattern
+A proxy container that simplifies access to external services for the main container.
+
+```yaml
+spec:
+  containers:
+    - name: my-app
+      image: my-app:v1
+      env:
+        - name: DB_HOST
+          value: "localhost"      # App talks to localhost
+        - name: DB_PORT
+          value: "5432"
+    - name: db-proxy             # Ambassador: proxies to the real DB
+      image: cloud-sql-proxy:2.0
+      args: ["--port=5432", "--instances=project:region:instance"]
+```
+
+**Use cases:** database proxy (Cloud SQL Proxy, PgBouncer), API gateway, connection pooling
+
+### Adapter Pattern
+A container that transforms the main container's output into a standard format.
+
+```yaml
+spec:
+  containers:
+    - name: legacy-app
+      image: legacy-app:v1       # Outputs logs in custom format
+      volumeMounts:
+        - name: logs
+          mountPath: /var/log/app
+    - name: log-adapter          # Adapter: converts to JSON for Prometheus
+      image: log-adapter:v1
+      volumeMounts:
+        - name: logs
+          mountPath: /var/log/app
+          readOnly: true
+      ports:
+        - containerPort: 9090    # Exposes /metrics in Prometheus format
+  volumes:
+    - name: logs
+      emptyDir: {}
+```
+
+**Use cases:** log format conversion, metrics format adaptation, protocol translation
+
+### Native Sidecar Containers (K8s 1.28+ GA in 1.29)
+
+Kubernetes now has first-class sidecar support via `initContainers` with `restartPolicy: Always`:
+
+```yaml
+spec:
+  initContainers:
+    - name: log-shipper
+      image: fluent-bit:3.0
+      restartPolicy: Always      # This makes it a native sidecar
+      volumeMounts:
+        - name: logs
+          mountPath: /var/log/app
+  containers:
+    - name: my-app
+      image: my-app:v1
+      volumeMounts:
+        - name: logs
+          mountPath: /var/log/app
+  volumes:
+    - name: logs
+      emptyDir: {}
+```
+
+**Why native sidecars matter:**
+- Start BEFORE the main container (guaranteed ordering)
+- Stay running for the pod's entire lifetime
+- Shut down AFTER the main container exits (proper cleanup)
+- Jobs/CronJobs complete correctly (sidecar doesn't block completion)
+
+Before this feature, sidecars in Jobs would prevent the Job from completing because the sidecar container never exits.
+
+## ResourceQuota & LimitRange (Namespace Resource Control)
+
+In multi-tenant clusters, you need to prevent one team from consuming all cluster resources. Two mechanisms:
+
+### ResourceQuota (Namespace-Level Caps)
+
+Sets the TOTAL resources a namespace can consume:
+
+```yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: team-a-quota
+  namespace: team-a
+spec:
+  hard:
+    requests.cpu: "10"           # Total CPU requests across all pods
+    requests.memory: 20Gi        # Total memory requests
+    limits.cpu: "20"             # Total CPU limits
+    limits.memory: 40Gi          # Total memory limits
+    pods: "50"                   # Max 50 pods in this namespace
+    services: "10"               # Max 10 services
+    persistentvolumeclaims: "10" # Max 10 PVCs
+    configmaps: "20"
+    secrets: "20"
+```
+
+```bash
+# Check quota usage
+kubectl describe resourcequota team-a-quota -n team-a
+
+# Output shows: Used / Hard for each resource
+```
+
+**Important:** When a ResourceQuota is set for CPU/memory, ALL pods in that namespace MUST specify resource requests/limits. Otherwise pod creation is rejected.
+
+### LimitRange (Per-Pod/Container Defaults and Bounds)
+
+Sets defaults and min/max for individual containers:
+
+```yaml
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-limits
+  namespace: team-a
+spec:
+  limits:
+    - type: Container
+      default:              # Applied if container doesn't specify limits
+        cpu: 500m
+        memory: 256Mi
+      defaultRequest:       # Applied if container doesn't specify requests
+        cpu: 100m
+        memory: 128Mi
+      min:                  # Minimum allowed
+        cpu: 50m
+        memory: 64Mi
+      max:                  # Maximum allowed
+        cpu: "2"
+        memory: 2Gi
+    - type: Pod
+      max:
+        cpu: "4"
+        memory: 4Gi
+```
+
+**How they work together:**
+- ResourceQuota = "your team gets 20 CPUs total"
+- LimitRange = "each container must be between 50m and 2 CPUs, defaults to 500m"
+- Together they prevent both runaway individual pods AND namespace-level resource hogging
+
+**Production pattern:**
+```
+Namespace "team-a":
+  ResourceQuota: 10 CPU, 20Gi memory, 50 pods max
+  LimitRange: default 100m/128Mi, max 2 CPU/2Gi per container
+  
+Namespace "team-b":
+  ResourceQuota: 20 CPU, 40Gi memory, 100 pods max
+  LimitRange: default 200m/256Mi, max 4 CPU/4Gi per container
+```
+
 ## Labs
 
 ### Lab 4.1: Rolling Updates
@@ -474,6 +661,11 @@ Init containers run sequentially. Main container only starts after ALL init cont
 18. Can a DaemonSet run on Fargate? Why or why not?
 19. You want a DaemonSet to run only on nodes labeled `monitoring=true`. How do you configure this?
 20. What happens to DaemonSet pods when you drain a node?
+21. Name the three multi-container pod patterns (sidecar, ambassador, adapter). Give one real-world example of each.
+22. You have a Job with a Fluent Bit sidecar container. The Job's main container finishes, but the pod stays Running. Why? How do native sidecar containers (restartPolicy: Always) fix this?
+23. What's a ResourceQuota? You set one requiring CPU requests on all pods. A developer deploys a pod without resource requests. What happens?
+24. What's the difference between ResourceQuota and LimitRange? Which sets namespace-level caps and which sets per-container defaults?
+25. You set a LimitRange with `default.cpu: 500m`. A developer deploys a container without specifying CPU. What CPU limit does it get?
 
 ## Checklist Before Moving On
 
@@ -489,3 +681,8 @@ Init containers run sequentially. Main container only starts after ALL init cont
 - [ ] Understand init containers and their use cases
 - [ ] Can create DaemonSets and understand when to use them
 - [ ] Know the difference between Deployment, StatefulSet, DaemonSet, and Job
+- [ ] Know the multi-container pod patterns (sidecar, ambassador, adapter)
+- [ ] Understand native sidecar containers (restartPolicy: Always on init containers)
+- [ ] Can create ResourceQuotas to cap namespace resource usage
+- [ ] Can create LimitRanges to set per-container defaults and bounds
+- [ ] Understand how ResourceQuota and LimitRange work together for multi-tenancy
