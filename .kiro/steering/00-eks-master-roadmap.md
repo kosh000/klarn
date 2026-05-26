@@ -1,5 +1,6 @@
 ---
-inclusion: always
+inclusion: auto
+description: EKS learning roadmap — stage map, progress tracking, philosophy, and documentation rules
 ---
 
 # EKS Mastery Learning Roadmap
@@ -11,6 +12,16 @@ Learn by doing first, then understanding why. Each stage follows:
 2. **Understand it** — learn what happened under the hood
 3. **Break it** — intentionally cause failures to learn troubleshooting
 4. **Best practices** — learn the production-grade way
+
+## Session Flow (STRICT)
+
+Within each stage, follow this interaction pattern:
+
+1. **Concepts first** — walk through all concepts/subjects in the stage one by one, explaining each with discussion
+2. **Labs after** — only after all concepts are covered, move to hands-on labs
+3. **One topic at a time** — present one concept, discuss it, answer questions, then move to the next
+4. **Learner controls pace** — wait for the learner to signal readiness before advancing to the next topic
+5. **No skipping ahead** — do not jump to labs or later topics until the current concept is understood
 
 ## Current Stack (2026)
 
@@ -79,7 +90,7 @@ Fargate, EKS Auto Mode, Hybrid Nodes, service mesh, custom operators
 
 | Stage | Status | Started | Completed |
 |-------|--------|---------|-----------|
-| Stage 0: Prerequisites | ⬜ Not started | — | — |
+| Stage 0: Prerequisites | 🟡 In progress | 2026-05-26 | — |
 | Stage 1: Docker & Containers | ⬜ Not started | — | — |
 | Stage 2: Kubernetes Core Concepts | ⬜ Not started | — | — |
 | Stage 3: EKS Cluster Setup | ⬜ Not started | — | — |
@@ -148,3 +159,10 @@ Fargate, EKS Auto Mode, Hybrid Nodes, service mesh, custom operators
 ## Your Notes
 
 - **AWS CLI Profile**: This project uses `--profile eks-learning` for all AWS commands. Region: `ap-south-1`, output: `json`. See `00-aws-profile.md` steering file for details.
+
+---
+
+## Referenced Files (auto-included as context)
+
+#[[file:docs/journal/learning-journal.md]]
+#[[file:docs/reference/00-learning-resources.md]]
