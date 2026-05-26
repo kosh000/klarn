@@ -381,6 +381,82 @@ strategy:
         - templateName: success-rate
 ```
 
+### Blue-Green vs Canary — When to Use Each
+
+| Aspect | Blue-Green | Canary |
+|--------|-----------|--------|
+| Traffic split | 0% or 100% (instant switch) | Gradual (10% → 30% → 100%) |
+| Rollback speed | Instant (switch back to blue) | Fast (set weight to 0%) |
+| Resource cost | 2x (both versions running fully) | 1.1-1.5x (only a few canary pods) |
+| Risk | All-or-nothing switch | Gradual exposure, catch issues early |
+| Best for | Database migrations, breaking changes | Stateless services, A/B testing |
+| Complexity | Simpler to reason about | More complex (traffic splitting) |
+
+**Blue-Green flow:**
+```
+1. "Blue" (current version) is serving all traffic
+2. Deploy "Green" (new version) alongside — full replica count
+3. Run smoke tests against Green (via preview service)
+4. If tests pass: switch active service to Green (instant cutover)
+5. If tests fail: delete Green, Blue keeps serving
+6. After confidence period: scale down Blue
+```
+
+**Blue-Green with Argo Rollouts:**
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: my-app
+spec:
+  replicas: 5
+  strategy:
+    blueGreen:
+      activeService: my-app-active       # Points to current version
+      previewService: my-app-preview     # Points to new version (for testing)
+      autoPromotionEnabled: false        # Require manual approval
+      scaleDownDelaySeconds: 300         # Keep old version for 5 min after switch
+      prePromotionAnalysis:
+        templates:
+          - templateName: smoke-tests    # Run tests before promoting
+        args:
+          - name: service-name
+            value: my-app-preview
+---
+# Active service (production traffic)
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app-active
+spec:
+  selector:
+    app: my-app
+  ports:
+    - port: 80
+---
+# Preview service (testing only)
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-app-preview
+spec:
+  selector:
+    app: my-app
+  ports:
+    - port: 80
+```
+
+```bash
+# Check rollout status
+kubectl argo rollouts get rollout my-app
+
+# Manually promote (switch traffic to green)
+kubectl argo rollouts promote my-app
+
+# Abort (rollback to blue)
+kubectl argo rollouts abort my-app
+```
+
 ## Labs
 
 ### Lab 10.1: Create a Helm Chart

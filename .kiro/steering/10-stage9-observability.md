@@ -308,6 +308,112 @@ service:
 | **Errors** | Error rate (5xx / total) | > 1% for 5 min |
 | **Saturation** | CPU, memory, disk usage | > 80% |
 
+## Resource Health Monitoring
+
+Beyond application health (probes), you need to monitor the health of cluster infrastructure itself.
+
+### Node Health
+```bash
+# Check node conditions
+kubectl describe node <name> | grep -A10 Conditions
+
+# Key conditions:
+# Ready = True          → node is healthy
+# MemoryPressure = True → node is running low on memory
+# DiskPressure = True   → node is running low on disk
+# PIDPressure = True    → too many processes
+# NetworkUnavailable    → network not configured correctly
+```
+
+**Alerting on node health:**
+```promql
+# Node not ready for 5 minutes
+kube_node_status_condition{condition="Ready",status="true"} == 0
+
+# Node has memory pressure
+kube_node_status_condition{condition="MemoryPressure",status="true"} == 1
+
+# Node disk usage > 85%
+(node_filesystem_size_bytes - node_filesystem_avail_bytes) / node_filesystem_size_bytes > 0.85
+```
+
+### PVC Health
+```promql
+# PVC not bound (stuck in Pending)
+kube_persistentvolumeclaim_status_phase{phase="Pending"} == 1
+
+# PV approaching capacity (EBS volume filling up)
+kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes > 0.85
+```
+
+### Cluster-Level Health
+```promql
+# Pods in failed state
+kube_pod_status_phase{phase="Failed"} > 0
+
+# Deployments with unavailable replicas
+kube_deployment_status_replicas_unavailable > 0
+
+# Jobs failing
+kube_job_status_failed > 0
+```
+
+### kubectl Health Commands
+```bash
+# Quick cluster health check
+kubectl get componentstatuses    # Deprecated but still works on some clusters
+kubectl get nodes
+kubectl top nodes
+kubectl top pods --sort-by=memory -A
+
+# Check for problems
+kubectl get pods -A --field-selector=status.phase!=Running,status.phase!=Succeeded
+kubectl get events --sort-by='.lastTimestamp' -A | tail -20
+```
+
+## Observability Engines (Managed Platforms)
+
+Self-hosted Prometheus + Grafana is great for learning and cost control. But in production, many teams use managed observability platforms for reduced operational burden.
+
+### Managed Options
+
+| Platform | Type | Pricing Model | Key Advantage |
+|----------|------|---------------|---------------|
+| **Amazon CloudWatch** | AWS-native | Per metric/log/trace ingested | No extra infra, deep AWS integration |
+| **Amazon Managed Prometheus (AMP)** | Managed Prometheus | Per metric sample ingested (~$0.003/10K samples) | Prometheus-compatible, no server management |
+| **Amazon Managed Grafana (AMG)** | Managed Grafana | Per active editor ($9/month) | Grafana without managing the server |
+| **Datadog** | Full platform (paid) | Per host (~$15-23/host/month for infra) | Best-in-class UI, APM, logs, all-in-one |
+| **New Relic** | Full platform (paid) | Per GB ingested (~$0.30/GB) | Generous free tier (100GB/month), full-stack |
+| **Grafana Cloud** | Managed Grafana stack (paid) | Per metric/log/trace | Prometheus + Loki + Tempo, managed |
+| **Dynatrace** | AI-powered (paid) | Per host (~$21/host/month) | Auto-instrumentation, AI root cause analysis |
+| **Splunk** | Log-focused (paid) | Per GB ingested | Powerful log search, enterprise compliance |
+
+### When to Use Managed vs Self-Hosted
+
+**Self-hosted (Prometheus + Grafana):**
+- Learning and development
+- Cost-sensitive (you pay only for compute/storage)
+- Full control over retention, configuration
+- No vendor lock-in
+- You have platform engineering capacity
+
+**Managed platforms:**
+- Small team, no time to manage monitoring infrastructure
+- Need SLA guarantees on observability itself
+- Want correlation across metrics/logs/traces in one UI
+- Compliance requirements (audit trails, data residency)
+- Budget allows $500-5000+/month for observability
+
+### AWS-Native Observability Stack
+```
+Metrics: Amazon Managed Prometheus (AMP) → Amazon Managed Grafana (AMG)
+Logs:    Fluent Bit → CloudWatch Logs → CloudWatch Insights
+Traces:  OpenTelemetry → AWS X-Ray
+Alerts:  CloudWatch Alarms → SNS → PagerDuty/Slack
+```
+
+This is the "zero extra servers" approach — everything is managed by AWS. Trade-off: higher per-unit cost, less flexibility, AWS lock-in.
+
 ## Labs
 
 ### Lab 9.1: Prometheus + Grafana Setup
@@ -372,3 +478,5 @@ service:
 - [ ] Understand distributed tracing concepts
 - [ ] Can set up OpenTelemetry for trace collection
 - [ ] Know the four golden signals and what to alert on
+- [ ] Can monitor node health, PVC health, and cluster-level health
+- [ ] Know the managed observability options (AMP, AMG, Datadog, etc.) and their trade-offs

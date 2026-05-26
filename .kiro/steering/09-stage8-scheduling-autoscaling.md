@@ -314,6 +314,142 @@ requirements:
 - Diversify instance types (Karpenter does this automatically)
 - Handle graceful shutdown (SIGTERM → 2 min to clean up)
 
+## Pod Priorities and Preemption
+
+When the cluster is full, which pods matter most? PriorityClasses let you define a hierarchy.
+
+### PriorityClass
+```yaml
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: critical-production
+value: 1000000          # Higher number = higher priority
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority  # or Never
+description: "For critical production workloads that must always run"
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: standard
+value: 100000
+globalDefault: true     # Default for pods without explicit priority
+description: "Standard workloads"
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: batch-low
+value: 10000
+preemptionPolicy: Never  # Can be evicted but won't evict others
+description: "Low-priority batch jobs that can be preempted"
+```
+
+### Using in a Pod
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+spec:
+  template:
+    spec:
+      priorityClassName: critical-production  # This pod is high priority
+      containers:
+        - name: payment
+          image: payment:v1
+```
+
+### How Preemption Works
+1. High-priority pod can't be scheduled (no resources available)
+2. Scheduler looks for nodes where evicting lower-priority pods would make room
+3. Lower-priority pods get evicted (graceful termination)
+4. High-priority pod gets scheduled on the freed node
+
+**Built-in system priorities (don't override these):**
+- `system-cluster-critical` (2000000000) — CoreDNS, kube-proxy
+- `system-node-critical` (2000001000) — kubelet-critical pods
+
+**Production pattern:**
+```
+system-node-critical    → kubelet, CNI (never evict)
+system-cluster-critical → CoreDNS, kube-proxy, monitoring
+critical-production     → Payment, auth, core APIs
+standard                → Regular app workloads (default)
+batch-low               → Batch jobs, data processing (evictable)
+```
+
+## Evictions
+
+Pods can be removed from nodes in several ways. Understanding eviction is critical for production reliability.
+
+### Types of Eviction
+
+| Type | Trigger | Who does it | Graceful? |
+|------|---------|-------------|-----------|
+| **Node-pressure eviction** | Node runs low on memory/disk/PIDs | kubelet | Yes (respects grace period) |
+| **Preemption** | Higher-priority pod needs resources | Scheduler | Yes |
+| **API-initiated eviction** | `kubectl drain`, PDB-aware | API server | Yes (respects PDBs) |
+| **Taint-based eviction** | Node gets `NoExecute` taint | Node controller | Yes (respects tolerationSeconds) |
+
+### Node-Pressure Eviction
+
+kubelet monitors node resources and evicts pods when thresholds are breached:
+
+| Signal | Default Threshold | What happens |
+|--------|------------------|--------------|
+| `memory.available` | < 100Mi | Evict pods (lowest priority first) |
+| `nodefs.available` | < 10% | Evict pods using most disk |
+| `imagefs.available` | < 15% | Evict pods, garbage collect images |
+| `pid.available` | < varies | Evict pods using most PIDs |
+
+**Eviction order (kubelet decides):**
+1. Pods exceeding resource requests
+2. Lowest priority pods first
+3. Pods using most of the starved resource
+
+### Taint-Based Eviction
+
+When a node becomes unhealthy, the node controller adds taints:
+```
+node.kubernetes.io/not-ready:NoExecute          — node is not ready
+node.kubernetes.io/unreachable:NoExecute        — node is unreachable
+node.kubernetes.io/memory-pressure:NoSchedule   — node is low on memory
+node.kubernetes.io/disk-pressure:NoSchedule     — node is low on disk
+node.kubernetes.io/pid-pressure:NoSchedule      — node is low on PIDs
+```
+
+Pods without matching tolerations get evicted. You can add `tolerationSeconds` to delay eviction:
+```yaml
+tolerations:
+  - key: "node.kubernetes.io/not-ready"
+    operator: "Exists"
+    effect: "NoExecute"
+    tolerationSeconds: 300    # Wait 5 min before evicting (default is 300)
+```
+
+### Graceful Shutdown
+
+When a pod is evicted:
+1. Pod status → `Terminating`
+2. Pod removed from Service endpoints (no new traffic)
+3. `preStop` hook runs (if defined)
+4. SIGTERM sent to container
+5. Wait `terminationGracePeriodSeconds` (default 30s)
+6. SIGKILL if still running
+
+```yaml
+spec:
+  terminationGracePeriodSeconds: 60  # Give app 60s to clean up
+  containers:
+    - name: my-app
+      lifecycle:
+        preStop:
+          exec:
+            command: ["/bin/sh", "-c", "sleep 5"]  # Wait for LB to drain
+```
+
 ## Labs
 
 ### Lab 8.1: Scheduling Control
@@ -378,3 +514,7 @@ requirements:
 - [ ] Understand Karpenter consolidation behavior
 - [ ] Can use topology spread constraints for HA
 - [ ] Know the difference between HPA (pod scaling) and Karpenter (node scaling)
+- [ ] Understand Pod Priorities and PriorityClasses
+- [ ] Know how preemption works (high-priority pods evict low-priority)
+- [ ] Understand eviction types (node-pressure, preemption, API-initiated, taint-based)
+- [ ] Know how graceful shutdown works (SIGTERM → grace period → SIGKILL)

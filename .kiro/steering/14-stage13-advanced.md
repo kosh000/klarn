@@ -225,6 +225,122 @@ A custom controller that extends Kubernetes to manage complex applications. It e
 
 **Example:** PostgreSQL Operator manages PostgreSQL clusters — handles replication, failover, backups, upgrades automatically.
 
+## Custom Schedulers and Extenders
+
+The default kube-scheduler works for most cases, but you can extend or replace it.
+
+### Scheduler Extenders (Webhooks)
+Add custom logic to the default scheduler without replacing it:
+```yaml
+# Scheduler configuration with extender
+apiVersion: kubescheduler.config.k8s.io/v1
+kind: KubeSchedulerConfiguration
+extenders:
+  - urlPrefix: "http://my-scheduler-extender:8080"
+    filterVerb: "filter"
+    prioritizeVerb: "prioritize"
+    weight: 5
+    enableHTTPS: false
+```
+
+**Use cases for custom scheduling:**
+- GPU-aware scheduling (match pod GPU requirements to node GPU types)
+- Data locality (schedule pods near their data)
+- License-aware scheduling (limit pods per node based on software licenses)
+- Cost-aware scheduling (prefer cheaper nodes)
+
+### Scheduling Framework Plugins (K8s 1.19+)
+The modern approach — write Go plugins that hook into scheduler phases:
+```
+QueueSort → PreFilter → Filter → PostFilter → PreScore → Score → Reserve → Permit → PreBind → Bind → PostBind
+```
+
+Each phase is a hook point where you can inject custom logic. This is how Karpenter integrates with scheduling.
+
+### Running Multiple Schedulers
+```yaml
+# Pod that uses a custom scheduler
+spec:
+  schedulerName: my-custom-scheduler  # Default is "default-scheduler"
+  containers:
+    - name: my-app
+      image: my-app:v1
+```
+
+You can run multiple schedulers simultaneously. Each pod specifies which scheduler should handle it.
+
+## Kubernetes Extensions and APIs
+
+### API Aggregation Layer
+Extend the Kubernetes API with your own API servers:
+```yaml
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1.metrics.k8s.io
+spec:
+  service:
+    name: metrics-server
+    namespace: kube-system
+  group: metrics.k8s.io
+  version: v1
+  groupPriorityMinimum: 100
+  versionPriority: 100
+```
+
+This is how `kubectl top pods` works — metrics-server registers as an API extension.
+
+### Extension Points Summary
+
+| Extension | What it does | Example |
+|-----------|-------------|---------|
+| CRDs + Operators | Add new resource types | CloudNativePG, Karpenter NodePool |
+| Admission Webhooks | Intercept/modify API requests | Kyverno, Istio sidecar injection |
+| Scheduler Extenders | Custom scheduling logic | GPU scheduling, data locality |
+| API Aggregation | Extend the K8s API | Metrics Server, custom metrics |
+| CSI Drivers | Custom storage backends | EBS CSI, EFS CSI |
+| CNI Plugins | Custom networking | VPC CNI, Calico, Cilium |
+| Device Plugins | Expose hardware to pods | NVIDIA GPU plugin |
+
+## Self-Managed Clusters (Understanding What EKS Hides)
+
+You're using EKS, which manages the control plane. But understanding what it hides deepens your knowledge.
+
+### What EKS Does For You (That You'd Do Manually)
+
+| Task | EKS handles it | Self-managed (kubeadm) |
+|------|---------------|----------------------|
+| etcd cluster | Managed, multi-AZ, backed up | You install, configure, backup, restore |
+| API server | Managed, auto-scaled, HA | You deploy, configure TLS certs, load balance |
+| Certificates | Auto-rotated | You manage CA, issue/rotate certs |
+| Scheduler + Controller Manager | Managed | You deploy and configure |
+| Upgrades | One API call | You upgrade each component manually |
+| etcd encryption | Configurable | You set up KMS encryption |
+
+### kubeadm (How Self-Managed Clusters Work)
+```bash
+# Initialize control plane (on master node)
+kubeadm init --pod-network-cidr=10.244.0.0/16
+
+# Join worker nodes
+kubeadm join <master-ip>:6443 --token <token> --discovery-token-ca-cert-hash sha256:<hash>
+```
+
+**Node bootstrapping process:**
+1. kubelet starts on the new node
+2. kubelet contacts API server with bootstrap token
+3. API server issues a client certificate to the node
+4. Node is registered and becomes `Ready`
+5. Scheduler can now place pods on it
+
+On EKS, this happens automatically via the node group's launch template and the `aws-auth` ConfigMap (legacy) or access entries (modern).
+
+### Why This Matters for EKS Users
+- Debugging: when nodes don't join, understanding the bootstrap process helps
+- Security: understanding certificate rotation helps with compliance
+- Architecture decisions: knowing what EKS hides helps you evaluate alternatives
+- Interviews: self-managed cluster knowledge is commonly tested
+
 ### Custom Resource Definition (CRD)
 ```yaml
 apiVersion: apiextensions.k8s.io/v1
@@ -304,15 +420,29 @@ spec:
       destinationPath: s3://my-backups/postgres
 ```
 
-## Multi-Cluster Patterns
+## Multi-Cluster Management
 
 ### Why Multiple Clusters?
 - Environment isolation (dev/staging/prod)
 - Regional deployment (us-east, eu-west)
 - Blast radius reduction (failure in one cluster doesn't affect others)
 - Team isolation (each team gets their own cluster)
+- Compliance (data residency requirements per region)
 
-### Managing Multiple Clusters
+### Multi-Cluster Tools
+
+| Tool | What it does | Complexity | Cost |
+|------|-------------|-----------|------|
+| **ArgoCD** (multi-cluster) | Deploy to multiple clusters from one ArgoCD | Low | Free (OSS) |
+| **Kubernetes Federation (KubeFed)** | Sync resources across clusters | High | Free (OSS, deprecated) |
+| **Liqo** | Virtual nodes — pods scheduled across clusters transparently | Medium | Free (OSS) |
+| **Admiralty** | Multi-cluster scheduling (virtual kubelet approach) | Medium | Free (OSS) |
+| **Rancher** | Multi-cluster management UI + lifecycle | Medium | Free (OSS) / Paid (SUSE support) |
+| **Rafay** | Managed multi-cluster platform | Low | Paid |
+| **AWS EKS Connector** | View external clusters in AWS console | Low | Free |
+| **Crossplane** | Manage infrastructure across clouds from K8s | High | Free (OSS) |
+
+### Managing Multiple Clusters with ArgoCD
 ```bash
 # kubectl contexts
 kubectl config get-contexts
@@ -324,10 +454,60 @@ argocd cluster add production-eks
 argocd cluster add staging-eks
 ```
 
+### ApplicationSet (ArgoCD Multi-Cluster Pattern)
+```yaml
+# Deploy same app to multiple clusters automatically
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: my-app-all-clusters
+  namespace: argocd
+spec:
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            environment: production
+  template:
+    metadata:
+      name: 'my-app-{{name}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/myorg/manifests.git
+        path: overlays/production
+      destination:
+        server: '{{server}}'
+        namespace: production
+```
+
 ### Cross-Cluster Service Discovery
-- AWS Cloud Map
-- Istio multi-cluster mesh
-- DNS-based (Route53 with weighted routing)
+- **AWS Cloud Map** — service registry that works across clusters and even non-K8s services
+- **Istio multi-cluster mesh** — transparent service-to-service communication across clusters
+- **DNS-based** (Route53 with weighted/latency routing) — simplest approach
+- **Skupper** — layer 7 virtual application network across clusters (free, OSS)
+
+### Multi-Cluster Patterns
+
+**Pattern 1: Hub and Spoke**
+```
+ArgoCD (hub cluster) → deploys to → Cluster A, Cluster B, Cluster C
+```
+One management cluster, multiple workload clusters.
+
+**Pattern 2: Replicated (Active-Active)**
+```
+Cluster US-East ←→ Cluster EU-West (both serve traffic, Route53 routes by latency)
+```
+Same app in multiple regions for low latency and disaster recovery.
+
+**Pattern 3: Specialized Clusters**
+```
+Cluster "platform" → shared services (monitoring, CI/CD, ArgoCD)
+Cluster "team-a"   → team A's workloads
+Cluster "team-b"   → team B's workloads
+```
+Isolation between teams with shared platform services.
 
 ## Labs
 

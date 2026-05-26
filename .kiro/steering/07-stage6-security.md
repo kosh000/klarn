@@ -238,6 +238,75 @@ spec:
 
 More flexible than Pod Security Standards. Can enforce custom rules.
 
+### Admission Controllers & Webhooks (How Policy Enforcement Works)
+
+Before understanding Kyverno, you need to understand the mechanism it uses: **admission controllers**.
+
+**What happens when you `kubectl apply`:**
+```
+kubectl apply → API Server → Authentication → Authorization (RBAC) → Admission Controllers → etcd (stored)
+```
+
+Admission controllers intercept requests AFTER auth but BEFORE persistence. Two types:
+
+1. **Mutating Admission Webhooks** — can MODIFY the request (add labels, inject sidecars, set defaults)
+2. **Validating Admission Webhooks** — can ACCEPT or REJECT the request (enforce policies)
+
+Order: Mutating runs first → then Validating.
+
+**Real-world examples:**
+- Istio sidecar injection = mutating webhook (adds envoy container to every pod)
+- Kyverno policy enforcement = validating webhook (rejects pods without resource limits)
+- Pod Security Admission = built-in validating admission (rejects privileged pods)
+- AWS EKS Pod Identity Agent = mutating webhook (injects credentials into pods)
+
+**Why this matters:**
+- Every policy tool (Kyverno, OPA/Gatekeeper, Pod Security) uses this mechanism
+- If admission webhooks are down, pod creation can be blocked cluster-wide
+- Understanding this helps you debug "why can't I create this pod?" issues
+
+```yaml
+# Example: what a webhook configuration looks like (you rarely write these manually)
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: my-policy-webhook
+webhooks:
+  - name: validate.example.com
+    rules:
+      - apiGroups: [""]
+        resources: ["pods"]
+        operations: ["CREATE", "UPDATE"]
+    clientConfig:
+      service:
+        name: policy-service
+        namespace: policy-system
+        path: /validate
+    failurePolicy: Fail    # If webhook is down: Fail (block) or Ignore (allow)
+    sideEffects: None
+```
+
+**Kubernetes 1.36 addition:** Mutating Admission Policies (CEL-based) — write admission policies without webhooks, using CEL expressions directly. Simpler than deploying a webhook server.
+
+```yaml
+# CEL-based validation (no webhook server needed) — K8s 1.36+
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: require-resource-limits
+spec:
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        resources: ["pods"]
+        operations: ["CREATE"]
+  validations:
+    - expression: "object.spec.containers.all(c, has(c.resources) && has(c.resources.limits))"
+      message: "All containers must have resource limits"
+```
+
+Now let's look at Kyverno, which uses validating/mutating webhooks under the hood:
+
 ```bash
 # Install Kyverno
 helm repo add kyverno https://kyverno.github.io/kyverno/
@@ -424,6 +493,8 @@ Now your secrets live in AWS Secrets Manager (encrypted, audited, rotatable) and
 - [ ] Can set up EKS Pod Identity for AWS access
 - [ ] Know the difference between Pod Identity and IRSA
 - [ ] Can enforce Pod Security Standards at namespace level
+- [ ] Understand admission controllers (mutating vs validating webhooks)
+- [ ] Know how Kyverno/OPA use admission webhooks under the hood
 - [ ] Can write Kyverno policies for custom enforcement
 - [ ] Can set up External Secrets Operator with AWS Secrets Manager
 - [ ] Understand the principle of least privilege in Kubernetes

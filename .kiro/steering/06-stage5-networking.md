@@ -101,6 +101,37 @@ spec:
 
 **Solution:** Ingress — one load balancer, routes traffic to different services based on hostname or path.
 
+### Load Balancing Concepts
+
+Before diving into Ingress, understand the two layers of load balancing:
+
+| Layer | OSI Layer | What it sees | AWS Resource | Use case |
+|-------|-----------|-------------|--------------|----------|
+| **L4 (Transport)** | TCP/UDP | IP + port only | NLB (Network Load Balancer) | Raw TCP, gRPC, high performance, TLS passthrough |
+| **L7 (Application)** | HTTP/HTTPS | Headers, paths, cookies | ALB (Application Load Balancer) | HTTP routing, path-based, host-based, redirects |
+
+**Key load balancing features:**
+- **Session affinity (sticky sessions)**: route same client to same pod. Use when app stores session state in memory (bad practice, but sometimes necessary).
+  ```yaml
+  spec:
+    sessionAffinity: ClientIP
+    sessionAffinityConfig:
+      clientIP:
+        timeoutSeconds: 3600
+  ```
+- **Connection draining**: when a pod is terminating, finish in-flight requests before killing it. Controlled by `terminationGracePeriodSeconds` on the pod and deregistration delay on the LB.
+- **Health checks**: LB only sends traffic to healthy targets. ALB checks HTTP path, NLB checks TCP port.
+- **Cross-zone load balancing**: distribute traffic evenly across AZs (enabled by default on ALB, optional on NLB).
+
+**Cost awareness (2026 pricing):**
+| Resource | Cost |
+|----------|------|
+| ALB | ~$0.0225/hour + $0.008/LCU-hour (~$16-30/month typical) |
+| NLB | ~$0.0225/hour + $0.006/NLCU-hour (~$16-25/month typical) |
+| Classic LB | ~$0.025/hour (legacy, avoid) |
+
+20 services × $20/month = $400/month in LBs alone. Ingress solves this.
+
 ### Install AWS Load Balancer Controller
 ```bash
 # This controller watches Ingress resources and creates ALBs/NLBs

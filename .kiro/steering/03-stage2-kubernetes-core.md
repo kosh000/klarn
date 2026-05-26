@@ -19,6 +19,30 @@ Docker runs containers on ONE machine. In production you need:
 
 Kubernetes solves all of this. It's a container orchestration platform.
 
+## Kubernetes Alternatives (Why K8s Won)
+
+| Platform | What it is | Status (2026) |
+|----------|-----------|---------------|
+| **Docker Swarm** | Docker's built-in orchestrator. Simple but limited. | Effectively dead. Docker Inc. pivoted to Docker Desktop. |
+| **HashiCorp Nomad** | Lightweight orchestrator (containers + VMs + binaries). | Niche. Used by teams that want simplicity over K8s complexity. |
+| **Amazon ECS** | AWS-native container orchestration (no K8s). | Active. Simpler than EKS but AWS-locked, no portability. |
+| **Apache Mesos / Marathon** | Datacenter-scale scheduler. | Dead. Twitter/Uber migrated off it. |
+| **OpenShift** | Red Hat's Kubernetes distribution (K8s + extras). | Active. Enterprise K8s with opinionated tooling. |
+
+**Why Kubernetes won:**
+- Open-source, vendor-neutral (CNCF governed)
+- Massive ecosystem (every tool integrates with it)
+- Portable across clouds (AWS, GCP, Azure, on-prem)
+- Industry standard — it's what jobs require
+- Self-healing, declarative, extensible (CRDs/operators)
+
+**When you might NOT use Kubernetes:**
+- Very simple apps (1-2 containers) → ECS or even just Docker Compose on EC2
+- Serverless-first architecture → AWS Lambda / Fargate without K8s
+- Tiny team with no K8s expertise and no portability needs → ECS is simpler
+
+You're learning K8s because it's the universal skill. ECS knowledge doesn't transfer. K8s knowledge transfers everywhere.
+
 ## Architecture
 
 ### Control Plane (the brain)
@@ -337,6 +361,8 @@ kubectl get pods -w  # Watch pods appear in real-time
 13. You run `kubectl delete pod my-pod` but it comes back immediately. Why?
 14. What's the difference between `kubectl apply -f` and `kubectl create -f`?
 15. Explain the "reconciliation loop" in your own words. What's "desired state" vs "actual state"?
+16. Name 3 Kubernetes alternatives. Why did Kubernetes win over them?
+17. When might you choose ECS over EKS? What's the trade-off?
 
 ## Checklist Before Moving On
 

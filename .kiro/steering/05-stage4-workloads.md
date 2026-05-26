@@ -308,6 +308,91 @@ spec:
               command: ["npm", "run", "cleanup"]
 ```
 
+## DaemonSets
+
+A DaemonSet ensures that ONE copy of a pod runs on EVERY node (or a subset of nodes). When a new node joins the cluster, the DaemonSet automatically schedules a pod on it. When a node is removed, the pod is garbage collected.
+
+### When to Use DaemonSets
+- **Log collectors** (Fluent Bit) — need to collect logs from every node
+- **Monitoring agents** (Node Exporter, Datadog agent) — need metrics from every node
+- **Network plugins** (VPC CNI / aws-node, kube-proxy) — must run on every node
+- **Security agents** (Falco, CrowdStrike) — must monitor every node
+- **Storage daemons** (CSI node plugins) — need access to every node's disks
+
+### DaemonSet Manifest
+```yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: log-collector
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: log-collector
+  template:
+    metadata:
+      labels:
+        app: log-collector
+    spec:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule    # Run even on control plane nodes
+      containers:
+        - name: fluent-bit
+          image: fluent/fluent-bit:3.0
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          volumeMounts:
+            - name: varlog
+              mountPath: /var/log
+              readOnly: true
+      volumes:
+        - name: varlog
+          hostPath:
+            path: /var/log
+```
+
+### Key Differences from Deployment
+
+| Feature | Deployment | DaemonSet |
+|---------|-----------|-----------|
+| Replicas | You specify count | One per node (automatic) |
+| Scheduling | Scheduler decides which node | Runs on ALL nodes |
+| Scaling | Manual or HPA | Scales with cluster size |
+| Use case | Application workloads | Infrastructure/node-level agents |
+
+### Targeting Specific Nodes
+```yaml
+spec:
+  template:
+    spec:
+      nodeSelector:
+        node-type: gpu    # Only run on GPU nodes
+```
+
+### Updating DaemonSets
+```yaml
+spec:
+  updateStrategy:
+    type: RollingUpdate      # or OnDelete (manual)
+    rollingUpdate:
+      maxUnavailable: 1      # Update one node at a time
+```
+
+```bash
+# Check DaemonSet status
+kubectl get daemonsets -n kube-system
+kubectl rollout status daemonset/log-collector -n kube-system
+```
+
+**Important:** DaemonSets do NOT work on Fargate (there are no "nodes" to run on). This is one of Fargate's biggest limitations.
+
 ## Init Containers
 
 Run BEFORE the main container starts. Use for setup tasks.
@@ -383,6 +468,11 @@ Init containers run sequentially. Main container only starts after ALL init cont
 13. A Secret is "base64 encoded." Is it encrypted? Can someone with kubectl access read it?
 14. You mount a ConfigMap as a file at `/etc/config/app.conf`. Can your app write to that file?
 15. What's the difference between `kubectl set image` and editing the Deployment YAML and applying it?
+16. What's a DaemonSet? How is it different from a Deployment with replicas equal to node count?
+17. You deploy Fluent Bit as a DaemonSet. A new node joins the cluster. Do you need to do anything for Fluent Bit to run on it?
+18. Can a DaemonSet run on Fargate? Why or why not?
+19. You want a DaemonSet to run only on nodes labeled `monitoring=true`. How do you configure this?
+20. What happens to DaemonSet pods when you drain a node?
 
 ## Checklist Before Moving On
 
@@ -396,3 +486,5 @@ Init containers run sequentially. Main container only starts after ALL init cont
 - [ ] Understand CPU throttling vs memory OOM kill
 - [ ] Can create Jobs and CronJobs
 - [ ] Understand init containers and their use cases
+- [ ] Can create DaemonSets and understand when to use them
+- [ ] Know the difference between Deployment, StatefulSet, DaemonSet, and Job

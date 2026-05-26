@@ -84,3 +84,107 @@
 ---
 
 (Next entries will be added as learning progresses)
+
+### 2026-05-26 — Roadmap Gap Analysis (roadmap.sh/kubernetes)
+
+**Context:** Learner found the roadmap.sh/kubernetes roadmap and asked to cross-reference it against the existing 14-stage curriculum to identify missing topics.
+
+**Source:** https://roadmap.sh/kubernetes (community Kubernetes learning roadmap, 2026)
+
+**Gap Analysis Performed:**
+
+Compared roadmap.sh topics against all 14 stages. Identified 13 missing/underrepresented topics.
+
+**Topics Added (by stage):**
+
+1. **Stage 2 — Kubernetes Alternatives** (Docker Swarm, Nomad, ECS, Mesos, OpenShift)
+   - Why K8s won, when you might NOT use K8s
+   - Added 2 self-test questions
+
+2. **Stage 4 — DaemonSets** (full section)
+   - What they are, when to use, manifest example
+   - Difference from Deployments, targeting specific nodes, update strategies
+   - Note: DaemonSets don't work on Fargate
+   - Added 5 self-test questions, updated checklist
+
+3. **Stage 5 — Load Balancing Concepts**
+   - L4 vs L7 load balancing, session affinity, connection draining
+   - ALB/NLB/Classic LB pricing (2026)
+   - Cost math showing why Ingress matters
+
+4. **Stage 6 — Admission Controllers & Webhooks** (full section)
+   - Mutating vs Validating admission webhooks
+   - How the API request flow works (auth → admission → etcd)
+   - Real-world examples (Istio, Kyverno, Pod Security, Pod Identity)
+   - Webhook configuration YAML example
+   - K8s 1.36 CEL-based ValidatingAdmissionPolicy (no webhook server needed)
+   - Updated checklist
+
+5. **Stage 8 — Pod Priorities and Preemption** (full section)
+   - PriorityClass resource, built-in system priorities
+   - How preemption works, production priority hierarchy pattern
+   
+6. **Stage 8 — Evictions** (full section)
+   - Four types: node-pressure, preemption, API-initiated, taint-based
+   - Node-pressure thresholds (memory, disk, PIDs)
+   - Taint-based eviction (automatic taints from node controller)
+   - Graceful shutdown flow (SIGTERM → grace period → SIGKILL)
+   - preStop hooks for LB draining
+   - Updated checklist with 4 new items
+
+7. **Stage 9 — Resource Health Monitoring** (full section)
+   - Node health conditions and PromQL queries
+   - PVC health monitoring
+   - Cluster-level health queries
+   - kubectl health check commands
+
+8. **Stage 9 — Observability Engines / Managed Platforms** (full section)
+   - Table of managed options with pricing: CloudWatch, AMP, AMG, Datadog, New Relic, Grafana Cloud, Dynatrace, Splunk
+   - When to use managed vs self-hosted (decision criteria)
+   - AWS-native observability stack pattern
+   - Updated checklist with 2 new items
+
+9. **Stage 10 — Blue-Green Deployments** (expanded from snippet to full section)
+   - Blue-Green vs Canary comparison table
+   - Full blue-green flow explanation
+   - Argo Rollouts blue-green manifest with preview/active services
+   - Promote/abort commands
+
+10. **Stage 13 — Custom Schedulers and Extenders** (full section)
+    - Scheduler extenders (webhook approach)
+    - Scheduling framework plugins (Go plugins, phase hooks)
+    - Running multiple schedulers, `schedulerName` field
+    - Use cases: GPU-aware, data locality, license-aware, cost-aware
+
+11. **Stage 13 — Kubernetes Extensions and APIs** (full section)
+    - API aggregation layer
+    - Extension points summary table (CRDs, webhooks, schedulers, API aggregation, CSI, CNI, device plugins)
+
+12. **Stage 13 — Self-Managed Clusters** (full section)
+    - What EKS hides vs what you'd do with kubeadm
+    - kubeadm init/join flow
+    - Node bootstrapping process
+    - Why this matters for EKS users (debugging, security, interviews)
+
+13. **Stage 13 — Multi-Cluster Management** (expanded significantly)
+    - Multi-cluster tools table with cost (ArgoCD, KubeFed, Liqo, Admiralty, Rancher, Rafay, Crossplane)
+    - ApplicationSet pattern for multi-cluster ArgoCD
+    - Cross-cluster service discovery options (Cloud Map, Istio, DNS, Skupper)
+    - Three multi-cluster patterns: Hub-and-Spoke, Active-Active, Specialized Clusters
+
+**Paid Services Noted:**
+- Datadog (~$15-23/host/month)
+- New Relic (~$0.30/GB ingested, 100GB free)
+- Grafana Cloud (per metric/log/trace)
+- Dynatrace (~$21/host/month)
+- Splunk (per GB ingested)
+- Rafay (paid multi-cluster platform)
+- Amazon Managed Prometheus (~$0.003/10K samples)
+- Amazon Managed Grafana ($9/active editor/month)
+- ALB (~$16-30/month), NLB (~$16-25/month)
+
+**Total additions:** ~13 new sections, ~27 new self-test questions, ~11 new checklist items across 7 stage files.
+
+---
+
+(Next entries will be added as learning progresses)
