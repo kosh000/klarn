@@ -1,6 +1,6 @@
 ---
 inclusion: manual
-description: "Stage 5: Networking & Ingress — Services, ALB Controller, ExternalDNS, Network Policies"
+description: "Stage 5: Networking & Ingress — Services, Gateway API, ALB Controller, MetalLB, Envoy Gateway, ExternalDNS, Network Policies"
 ---
 
 # Stage 5: Networking & Ingress
@@ -96,7 +96,144 @@ spec:
 - DNS returns individual pod IPs directly
 - Used for StatefulSets where you need to address specific pods
 
-## Ingress & AWS Load Balancer Controller
+## Exposing Apps: The Full Picture (EKS, On-Prem, Local)
+
+Before diving into Ingress specifics, understand that **how you expose an app depends on where your cluster runs**:
+
+| Environment | LoadBalancer type: Service | Ingress / Gateway | Typical stack |
+|-------------|---------------------------|-------------------|---------------|
+| **EKS (cloud)** | AWS LB Controller provisions NLB/ALB automatically | AWS LB Controller (Ingress or Gateway API) | ALB + ExternalDNS + ACM certs |
+| **On-prem / bare-metal** | Needs MetalLB (or Cilium LB) to assign IPs | Envoy Gateway or Traefik (with Gateway API) | MetalLB + Envoy Gateway + cert-manager |
+| **Local (kind/minikube)** | No real LB — stays `<pending>` forever | kubectl port-forward or extraPortMappings | port-forward for dev, extraPortMappings for testing |
+
+This is a critical distinction. On EKS, `type: LoadBalancer` "just works" because the cloud controller manager talks to AWS. On bare metal, there's no cloud — you need software to fill that gap.
+
+### kubectl port-forward (Quick Dev Access)
+
+The simplest way to reach a Service from your machine — works everywhere, no setup needed:
+
+```bash
+# Forward local port 8080 to Service port 80
+kubectl port-forward svc/my-app 8080:80
+
+# Now access at http://localhost:8080
+# Ctrl+C to stop
+
+# Forward to a specific pod (bypasses Service)
+kubectl port-forward pod/my-app-abc123 8080:8080
+```
+
+**Limitations:** single connection, no load balancing, stops when you Ctrl+C. Fine for debugging, not for real traffic.
+
+### kind Cluster: extraPortMappings
+
+kind runs nodes as Docker containers. To reach NodePort services from your host, you must map ports at cluster creation time:
+
+```yaml
+# kind-config.yaml
+apiVersion: kind.x-k8s.io/v1alpha4
+kind: Cluster
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080   # Must match your Service's nodePort
+        hostPort: 30080        # Port on your machine
+        listenAddress: "0.0.0.0"
+      - containerPort: 30443
+        hostPort: 30443
+        listenAddress: "0.0.0.0"
+```
+
+```bash
+kind create cluster --config kind-config.yaml
+```
+
+Then create a NodePort Service with matching port:
+```yaml
+spec:
+  type: NodePort
+  ports:
+    - port: 80
+      targetPort: 8080
+      nodePort: 30080    # Must match extraPortMappings containerPort
+```
+
+Access at `http://localhost:30080`. This is how you test NodePort/Ingress locally.
+
+## On-Prem / Bare-Metal: MetalLB + Envoy Gateway
+
+### The Problem
+
+On bare metal, `type: LoadBalancer` stays in `<pending>` state forever — there's no cloud provider to create a load balancer. You need two things:
+
+1. **MetalLB** — assigns real IPs to LoadBalancer Services (fills the cloud LB gap)
+2. **An ingress/gateway controller** — routes L7 traffic (fills the ALB gap)
+
+### MetalLB (LoadBalancer IP Assignment)
+
+MetalLB makes `type: LoadBalancer` work on bare metal by announcing IPs via ARP (Layer 2) or BGP.
+
+```bash
+# Install MetalLB
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml
+
+# Wait for pods to be ready
+kubectl wait --namespace metallb-system \
+  --for=condition=ready pod \
+  --selector=app=metallb \
+  --timeout=90s
+```
+
+**Configure an IP pool (Layer 2 mode — simplest):**
+```yaml
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: default-pool
+  namespace: metallb-system
+spec:
+  addresses:
+    - 192.168.1.240-192.168.1.250   # Range of IPs on your network
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: default
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - default-pool
+```
+
+Now `type: LoadBalancer` Services get a real IP from that pool. Any machine on the same L2 network can reach it.
+
+**Layer 2 vs BGP:**
+
+| Mode | How it works | Pros | Cons |
+|------|-------------|------|------|
+| **L2 (ARP)** | One node answers ARP for the VIP | Simple, no router config needed | Single-node bottleneck, failover takes ~10s |
+| **BGP** | Advertises routes to your router | True load distribution, fast failover | Requires BGP-capable router |
+
+For learning and small clusters, L2 is fine. For production on-prem, BGP is preferred.
+
+**Alternative: Cilium LB**
+If you're already using Cilium as your CNI, it has built-in L2/BGP LoadBalancer support — no MetalLB needed. Cilium uses eBPF for high-performance packet processing.
+
+### Envoy Gateway (On-Prem Ingress — Gateway API)
+
+With Ingress NGINX retired (March 2026), the recommended on-prem ingress controller is **Envoy Gateway** using the **Kubernetes Gateway API**.
+
+```bash
+# Install Envoy Gateway
+kubectl apply --server-side -f \
+  https://github.com/envoyproxy/gateway/releases/download/v1.8.0/install.yaml
+```
+
+Then define a Gateway and HTTPRoute (see Gateway API section below).
+
+Envoy Gateway's quickstart docs explicitly recommend MetalLB for bare-metal clusters where no cloud LoadBalancer exists.
+
+## Ingress & AWS Load Balancer Controller (EKS)
 
 **Problem:** LoadBalancer creates one LB per service. If you have 20 services, that's 20 LBs ($$$).
 
@@ -204,6 +341,195 @@ alb.ingress.kubernetes.io/healthcheck-path: /healthz
 alb.ingress.kubernetes.io/certificate-arn: <acm-cert-arn>
 alb.ingress.kubernetes.io/ssl-redirect: "443"
 ```
+
+## Gateway API (The Future — Replaces Ingress)
+
+### Why Gateway API?
+
+The Kubernetes Ingress API (2015) has fundamental limitations:
+- All configuration via annotations (non-portable, controller-specific)
+- No role separation (one resource for infra + app concerns)
+- Limited to HTTP (no TCP/UDP/gRPC natively)
+- No traffic splitting, header matching, or request mirroring
+
+**Gateway API** (GA since K8s 1.29) is the official successor. It's not a controller — it's a standard API that multiple controllers implement.
+
+### Key Differences: Ingress vs Gateway API
+
+| Aspect | Ingress | Gateway API |
+|--------|---------|-------------|
+| Configuration | Annotations (non-portable) | Structured fields (portable) |
+| Role separation | None (one resource) | GatewayClass → Gateway → Routes (3 layers) |
+| Protocol support | HTTP/HTTPS only | HTTP, gRPC, TCP, UDP, TLS |
+| Traffic splitting | Not native | Built-in (weight-based) |
+| Header matching | Annotation hacks | First-class support |
+| Status | Legacy (still works) | Active development, future standard |
+
+### The Three-Layer Model
+
+```
+Platform Admin → GatewayClass (which controller to use)
+Cluster Ops    → Gateway (what ports/protocols to listen on, what certs)
+App Developer  → HTTPRoute / GRPCRoute / TCPRoute (how to route traffic)
+```
+
+This separation means app developers don't need to know about infrastructure details.
+
+### Gateway API on EKS (AWS Load Balancer Controller v3+)
+
+The AWS Load Balancer Controller supports Gateway API in GA since v3. Same controller, new API:
+
+```yaml
+# GatewayClass — tells K8s to use AWS LB Controller
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: aws-alb
+spec:
+  controllerName: gateway.k8s.aws/alb-controller
+---
+# Gateway — creates an ALB
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: my-gateway
+  annotations:
+    gateway.k8s.aws/scheme: internet-facing
+    gateway.k8s.aws/certificate-arn: arn:aws:acm:us-east-1:xxx:certificate/xxx
+spec:
+  gatewayClassName: aws-alb
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: my-cert
+---
+# HTTPRoute — routes traffic to services (app developer creates this)
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: my-routes
+spec:
+  parentRefs:
+    - name: my-gateway
+  hostnames:
+    - "api.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /users
+      backendRefs:
+        - name: users-service
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /orders
+      backendRefs:
+        - name: orders-service
+          port: 80
+```
+
+### Gateway API on Bare Metal (Envoy Gateway)
+
+Same API, different controller:
+
+```yaml
+# GatewayClass — Envoy Gateway (on-prem)
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: envoy
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+# Gateway — Envoy creates an Envoy proxy Deployment + LoadBalancer Service
+# MetalLB assigns the external IP
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: my-gateway
+spec:
+  gatewayClassName: envoy
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: my-tls-cert    # From cert-manager
+---
+# HTTPRoute — IDENTICAL to the EKS version above
+# This is the portability win: app developers write the same routes everywhere
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: my-routes
+spec:
+  parentRefs:
+    - name: my-gateway
+  hostnames:
+    - "api.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /users
+      backendRefs:
+        - name: users-service
+          port: 80
+```
+
+### Traffic Splitting (Gateway API Native)
+
+```yaml
+# Canary: 90% to v1, 10% to v2 — no annotations, no Istio needed
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: canary-route
+spec:
+  parentRefs:
+    - name: my-gateway
+  rules:
+    - backendRefs:
+        - name: my-app-v1
+          port: 80
+          weight: 90
+        - name: my-app-v2
+          port: 80
+          weight: 10
+```
+
+### Which Should You Learn?
+
+**Both.** Ingress still works and you'll encounter it in existing clusters. Gateway API is what you'll use for new deployments. The mental model is the same (route external traffic to services), just better structured.
+
+| Situation | Use |
+|-----------|-----|
+| Existing cluster with Ingress working fine | Keep Ingress, migrate when convenient |
+| New EKS deployment (2026+) | Gateway API with AWS LB Controller v3+ |
+| New on-prem deployment | Gateway API with Envoy Gateway + MetalLB |
+| Need traffic splitting without service mesh | Gateway API (native weight-based routing) |
+| Local dev (kind) | kubectl port-forward or Gateway API with Envoy Gateway |
+
+### Comparison: Full Exposure Stack by Environment
+
+| Layer | EKS | On-Prem (bare metal) | Local (kind) |
+|-------|-----|---------------------|--------------|
+| **IP assignment** | Cloud controller (automatic) | MetalLB (L2/BGP) | extraPortMappings or port-forward |
+| **L7 routing** | AWS LB Controller (ALB) | Envoy Gateway | Envoy Gateway or port-forward |
+| **TLS certs** | ACM (free, auto-renew) | cert-manager + Let's Encrypt | self-signed or mkcert |
+| **DNS** | ExternalDNS → Route53 | ExternalDNS → your DNS, or manual | /etc/hosts |
+| **API** | Ingress or Gateway API | Gateway API | Gateway API |
 
 ## CoreDNS (Service Discovery)
 
@@ -322,31 +648,48 @@ iptables -t nat -L KUBE-SERVICES -n | grep <service-name>
 4. Change to LoadBalancer — access via external URL
 5. Create a headless service — verify DNS returns pod IPs
 
-### Lab 5.2: Ingress with ALB
+### Lab 5.2: Ingress with ALB (EKS)
 1. Install AWS Load Balancer Controller
 2. Create two different deployments (app-a, app-b)
 3. Create an Ingress that routes /a → app-a and /b → app-b
 4. Verify both paths work through a single ALB
 5. Add TLS with an ACM certificate
 
-### Lab 5.3: DNS and Service Discovery
+### Lab 5.3: Gateway API on EKS
+1. Ensure AWS Load Balancer Controller v3+ is installed
+2. Create a GatewayClass and Gateway resource
+3. Create HTTPRoutes for two services (path-based routing)
+4. Verify traffic routes correctly through the ALB
+5. Add traffic splitting: 90/10 between two versions of the same app
+
+### Lab 5.4: MetalLB + Envoy Gateway (On-Prem / kind)
+1. Create a kind cluster with extraPortMappings for ports 80 and 443
+2. Install MetalLB and configure an IP pool (use Docker network range for kind)
+3. Install Envoy Gateway
+4. Create a GatewayClass, Gateway, and HTTPRoute
+5. Deploy two apps and verify path-based routing works from your host machine
+6. Compare: the HTTPRoute you wrote is identical to what you'd use on EKS
+
+### Lab 5.5: DNS and Service Discovery
 1. Deploy two apps in different namespaces
 2. From app-a, curl app-b using: `<service>.<namespace>.svc.cluster.local`
 3. Verify short names work within same namespace
 4. Check CoreDNS logs to see queries
 
-### Lab 5.4: Network Policies
+### Lab 5.6: Network Policies
 1. Deploy frontend, backend, and database pods
 2. Verify all can talk to all (default)
 3. Apply a Network Policy: only frontend → backend → database
 4. Verify frontend can't reach database directly
 5. Verify backend can't reach frontend
 
-### Lab 5.5: Break Things
+### Lab 5.7: Break Things
 1. Delete CoreDNS pods — watch service discovery break
 2. Create a Service with wrong selector — no endpoints
 3. Set up Ingress with wrong path — 404s
 4. Block all egress with Network Policy — watch DNS fail (forgot to allow port 53)
+5. On kind: forget extraPortMappings — observe NodePort unreachable from host
+6. On bare metal: delete MetalLB — watch LoadBalancer Services go to `<pending>`
 
 ## Self-Test Questions
 
@@ -365,15 +708,31 @@ iptables -t nat -L KUBE-SERVICES -n | grep <service-name>
 13. What's the difference between the AWS Load Balancer Controller and the old `service.beta.kubernetes.io/aws-load-balancer-type` annotation approach?
 14. You set up ExternalDNS. What does it actually do when you create an Ingress with `host: api.example.com`?
 15. A Network Policy blocks all egress. Now your pod can't resolve DNS. Why? What port/protocol do you need to allow?
+16. You deploy `type: LoadBalancer` on a bare-metal cluster (no cloud). The Service stays in `<pending>` forever. Why? What do you install to fix it?
+17. What's MetalLB? What are its two modes (L2 and BGP)? When would you use each?
+18. What's the difference between Ingress (legacy API) and Gateway API? Name 3 advantages of Gateway API.
+19. In Gateway API, what are the three resource layers (GatewayClass, Gateway, HTTPRoute)? Who typically creates each one?
+20. You write an HTTPRoute on EKS with AWS LB Controller. You then move the same HTTPRoute to an on-prem cluster with Envoy Gateway. Does it work without changes? Why is this significant?
+21. You're on a kind cluster and create a NodePort Service on port 30080. You curl `localhost:30080` but get "connection refused." What did you forget?
+22. `kubectl port-forward svc/my-app 8080:80` — what does this do? Is it suitable for production traffic? Why or why not?
+23. Ingress NGINX was retired in March 2026. What are the two recommended replacements for (a) EKS and (b) on-prem?
+24. You want traffic splitting (90% v1, 10% v2) without installing Istio. Which API supports this natively?
+25. On bare metal with MetalLB in L2 mode, all traffic for a LoadBalancer VIP goes through a single node. Why? What's the production fix?
 
 ## Checklist Before Moving On
 
 - [ ] Understand the four networking problems K8s solves
 - [ ] Know how VPC CNI works (real VPC IPs for pods)
 - [ ] Can create and use all Service types (ClusterIP, NodePort, LoadBalancer, Headless)
-- [ ] Can set up Ingress with AWS Load Balancer Controller
+- [ ] Can set up Ingress with AWS Load Balancer Controller (EKS)
 - [ ] Understand path-based and host-based routing
 - [ ] Know how CoreDNS provides service discovery
 - [ ] Can write Network Policies to restrict traffic
 - [ ] Understand how kube-proxy implements Service routing
 - [ ] Know when to use Ingress vs LoadBalancer Service
+- [ ] Understand Gateway API (GatewayClass, Gateway, HTTPRoute) and why it replaces Ingress
+- [ ] Can set up Gateway API on EKS (AWS LB Controller v3+)
+- [ ] Know how to expose apps on bare metal (MetalLB + Envoy Gateway)
+- [ ] Know the difference between MetalLB L2 and BGP modes
+- [ ] Can use kubectl port-forward and kind extraPortMappings for local dev
+- [ ] Understand the full exposure stack differences: EKS vs on-prem vs local

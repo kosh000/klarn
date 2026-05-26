@@ -23,6 +23,9 @@
 - [Terraform AWS EKS Module](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest)
 - [Prometheus Docs](https://prometheus.io/docs/)
 - [Grafana Docs](https://grafana.com/docs/)
+- [Kubernetes Gateway API Docs](https://gateway-api.sigs.k8s.io/)
+- [Envoy Gateway Docs](https://gateway.envoyproxy.io/)
+- [MetalLB Docs](https://metallb.io/)
 
 ## Current Versions (May 2026)
 
@@ -36,6 +39,10 @@
 | Terraform AWS provider | 5.x | |
 | Istio | 1.24+ | |
 | Fluent Bit | 3.x | |
+| Gateway API | v1.2+ | GA for core resources (Gateway, HTTPRoute) |
+| Envoy Gateway | 1.8+ | Recommended Ingress NGINX replacement (on-prem) |
+| MetalLB | 0.14+ | Bare-metal LoadBalancer IP assignment |
+| AWS LB Controller | 3.x | GA Gateway API support |
 
 ## Key 2026 Changes to Be Aware Of
 
@@ -52,11 +59,13 @@
 
 4. **Karpenter** — default node autoscaler (Cluster Autoscaler is legacy)
 
-5. **Ingress NGINX retirement** — upstream project retiring March 2026. Use AWS Load Balancer Controller instead.
+5. **Ingress NGINX retirement** — upstream project retired March 2026. Use AWS Load Balancer Controller (EKS) or Envoy Gateway (on-prem) instead.
 
-6. **EKS Hybrid Nodes Gateway** — simplifies networking for hybrid (cloud + on-prem) deployments
+6. **Gateway API GA** — the official successor to the Ingress API. Role-oriented (GatewayClass → Gateway → Routes), portable across controllers. AWS LB Controller v3+ supports it natively. Envoy Gateway is the recommended on-prem implementation.
 
-7. **Helm 4** — native server-side apply patterns
+7. **EKS Hybrid Nodes Gateway** — simplifies networking for hybrid (cloud + on-prem) deployments
+
+8. **Helm 4** — native server-side apply patterns
 
 ## GitHub Repositories Worth Starring
 

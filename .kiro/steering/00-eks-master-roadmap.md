@@ -37,7 +37,8 @@ Within each stage, follow this interaction pattern:
 | Monitoring | Prometheus + Grafana | Kubernetes-native, portable |
 | Logging | Fluent Bit → CloudWatch / Loki | AWS-native + Grafana integration |
 | Tracing | OpenTelemetry → X-Ray / Jaeger | Vendor-neutral standard |
-| Ingress | AWS Load Balancer Controller | EKS-native, ALB/NLB |
+| Ingress | AWS Load Balancer Controller + Gateway API | EKS-native, ALB/NLB. Gateway API for portability |
+| Ingress (on-prem) | MetalLB + Envoy Gateway | Bare-metal LB + Gateway API controller |
 | Security policy | Pod Security Admission + Kyverno | Built-in + simple policy engine |
 | Secrets | External Secrets Operator + AWS Secrets Manager | Production-grade |
 | Container runtime | containerd | Default since K8s 1.24 (Docker shim removed) |
@@ -60,7 +61,7 @@ eksctl cluster creation, deploy first workload, explore nodes, understand what w
 Deployments, ConfigMaps, Secrets, probes, resource management, Jobs
 
 ### Stage 5: Networking & Ingress
-Services, Ingress, ALB Controller, ExternalDNS, CoreDNS, Network Policies
+Services, Gateway API, Ingress, ALB Controller, MetalLB, Envoy Gateway, ExternalDNS, CoreDNS, Network Policies
 
 ### Stage 6: Security
 RBAC, Pod Identity, Pod Security Standards, Kyverno, secrets management

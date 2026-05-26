@@ -144,6 +144,31 @@ sudo /usr/local/bin/nodeadm init \
 ### Hybrid Nodes Gateway (2026)
 Simplifies networking between VPC and on-premises pods. Automatically manages pod-to-pod traffic across environments using VXLAN tunnels.
 
+### Exposing Apps on Hybrid Nodes (Ingress Traffic Path)
+
+When running workloads on on-prem Hybrid Nodes, external traffic can reach them via two patterns:
+
+**Pattern 1: Cloud Ingress → On-Prem Pods**
+```
+Internet → ALB (in AWS) → Gateway/Ingress → routes to pods on Hybrid Nodes
+```
+The ALB lives in AWS. The AWS LB Controller routes traffic to pod IPs on Hybrid Nodes via the Hybrid Nodes Gateway VXLAN tunnel. This works because the Gateway makes on-prem pod IPs routable from the VPC.
+
+**Pattern 2: On-Prem Ingress (fully local)**
+```
+Local network → MetalLB VIP → Envoy Gateway (on-prem node) → pods on Hybrid Nodes
+```
+Install MetalLB + Envoy Gateway on the on-prem nodes. Traffic never touches AWS. Use this for low-latency or data-residency requirements.
+
+**Pattern 3: Split Ingress (hybrid)**
+```
+Internet traffic → ALB (AWS) → cloud pods
+Local traffic → MetalLB (on-prem) → on-prem pods
+```
+Route53 or your DNS splits traffic by source. Cloud users hit the ALB, on-prem users hit the local VIP.
+
+**Key consideration:** If your Hybrid Nodes lose connectivity to the EKS control plane, existing pods keep running but no new scheduling happens. Your on-prem ingress (MetalLB + Envoy Gateway) continues serving traffic independently — it doesn't need the control plane for data-path operations.
+
 ## Service Mesh
 
 ### What is a Service Mesh?

@@ -280,6 +280,44 @@ kubectl get nodes
 kind delete cluster --name learning
 ```
 
+### Accessing Services from Your Host Machine
+
+kind runs Kubernetes nodes as Docker containers. This means you can't just curl a NodePort from `localhost` without extra setup. Three options:
+
+**Option 1: kubectl port-forward (simplest, always works)**
+```bash
+# Forward local port 8080 → Service port 80
+kubectl port-forward svc/my-app 8080:80
+
+# Access at http://localhost:8080
+# Ctrl+C to stop
+```
+Good for quick debugging. Not real load balancing — single connection.
+
+**Option 2: extraPortMappings (for NodePort testing)**
+
+Must be configured at cluster creation time:
+```yaml
+# kind-with-ports.yaml
+apiVersion: kind.x-k8s.io/v1alpha4
+kind: Cluster
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080
+        hostPort: 30080
+```
+
+```bash
+kind create cluster --name learning --config kind-with-ports.yaml
+```
+
+Then create a Service with `nodePort: 30080` — accessible at `http://localhost:30080`.
+
+**Option 3: LoadBalancer with MetalLB (production-like)**
+
+For a more realistic setup (covered in Stage 5), install MetalLB on kind to make `type: LoadBalancer` work locally. This is how you'd test Ingress/Gateway controllers locally.
+
 ## Labs
 
 ### Lab 2.1: Local Cluster + First Deployment

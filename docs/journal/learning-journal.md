@@ -228,3 +228,74 @@ Compared roadmap.sh topics against all 14 stages. Identified 13 missing/underrep
 
 ---
 
+### 2026-05-26 — Gap Fix: App Exposure for On-Prem, Bare-Metal, and Local Clusters
+
+**Context:** Learner identified that the curriculum only covered app exposure for EKS (AWS Load Balancer Controller + Ingress) but missed on-prem/bare-metal and local (kind) exposure patterns. This is a best-practice gap — a complete Kubernetes education must cover how to expose apps regardless of where the cluster runs.
+
+**Research Conducted:**
+- Ingress NGINX officially retired March 2026 (archived, no security patches)
+- Gateway API is the official successor to Ingress API (GA since K8s 1.29, core resources stable)
+- AWS Load Balancer Controller v3+ supports Gateway API in GA (announced early 2026)
+- Envoy Gateway is the recommended on-prem/bare-metal Gateway API implementation
+- MetalLB remains the standard for bare-metal LoadBalancer IP assignment (L2/BGP modes)
+- Cilium also offers built-in L2/BGP LB as an alternative to MetalLB
+- kind requires extraPortMappings at cluster creation time for NodePort access from host
+
+**Sources:**
+- https://aws.amazon.com/blogs/networking-and-content-delivery/aws-load-balancer-controller-adds-general-availability-support-for-kubernetes-gateway-api/
+- https://gateway.envoyproxy.io/ (quickstart recommends MetalLB for bare-metal)
+- https://metallb.io/
+- https://github.com/kubernetes/ingress-nginx (archived March 24, 2026)
+- https://tasrieit.com/blog/migrate-nginx-ingress-to-envoy-gateway-complete-guide
+
+**What was added:**
+
+1. **Stage 5 — "Exposing Apps: The Full Picture" section** (new)
+   - Comparison table: EKS vs on-prem vs local exposure stacks
+   - kubectl port-forward explanation
+   - kind extraPortMappings with config example
+   - MetalLB full section (install, IP pool config, L2 vs BGP comparison)
+   - Envoy Gateway introduction for on-prem
+   - Note about Cilium LB as MetalLB alternative
+
+2. **Stage 5 — "Gateway API" section** (new, major)
+   - Why Gateway API replaces Ingress (limitations of annotations-based config)
+   - Ingress vs Gateway API comparison table
+   - Three-layer model (GatewayClass → Gateway → HTTPRoute)
+   - Full Gateway API example for EKS (AWS LB Controller v3+)
+   - Full Gateway API example for bare metal (Envoy Gateway)
+   - Traffic splitting example (native, no Istio needed)
+   - Decision table: when to use Ingress vs Gateway API
+   - Full exposure stack comparison table (EKS vs on-prem vs local)
+
+3. **Stage 5 — Labs expanded**
+   - Lab 5.3: Gateway API on EKS (new)
+   - Lab 5.4: MetalLB + Envoy Gateway on kind (new)
+   - Lab 5.7: Break Things expanded with on-prem failure scenarios
+
+4. **Stage 5 — Self-test questions expanded**
+   - Added 10 new questions (16-25) covering MetalLB, Gateway API, on-prem exposure, kind access, Ingress NGINX retirement
+
+5. **Stage 5 — Checklist expanded**
+   - Added 6 new items covering Gateway API, MetalLB, Envoy Gateway, local dev access
+
+6. **Stage 2 — Local cluster access section** (new)
+   - Three options for accessing services from kind: port-forward, extraPortMappings, MetalLB
+   - Config examples for each
+
+7. **Stage 13 — Hybrid Nodes ingress patterns** (new)
+   - Three patterns: Cloud Ingress → on-prem pods, fully local ingress, split ingress
+   - Control plane disconnection behavior for data-path
+
+8. **Master roadmap — Current Stack table updated**
+   - Added Gateway API and on-prem ingress row (MetalLB + Envoy Gateway)
+   - Updated Stage 5 description
+
+9. **Learning resources — updated**
+   - Added Gateway API, Envoy Gateway, MetalLB docs links
+   - Added version table entries (Gateway API v1.2+, Envoy Gateway 1.8+, MetalLB 0.14+, AWS LB Controller 3.x)
+   - Updated "Key 2026 Changes" with Gateway API GA and Ingress NGINX retirement details
+
+**Key insight documented:** The Gateway API's portability is the real win — an HTTPRoute written for EKS works unchanged on bare metal with Envoy Gateway. Only the GatewayClass and Gateway (infra layer) change between environments. App developers write the same routing rules everywhere.
+
+---
