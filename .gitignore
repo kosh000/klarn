@@ -1,0 +1,13 @@
+# Credentials — NEVER commit
+.aws-cred
+*.pem
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+*~
