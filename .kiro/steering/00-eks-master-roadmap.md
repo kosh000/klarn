@@ -76,25 +76,30 @@ Fargate, EKS Auto Mode, Hybrid Nodes, service mesh, custom operators
 
 ## Progress Tracking
 
-- [ ] Stage 0: Prerequisites
-- [ ] Stage 1: Docker & Containers
-- [ ] Stage 2: Kubernetes Core Concepts
-- [ ] Stage 3: EKS Cluster Setup
-- [ ] Stage 4: Workloads & Application Lifecycle
-- [ ] Stage 5: Networking & Ingress
-- [ ] Stage 6: Security
-- [ ] Stage 7: Storage & Stateful Workloads
-- [ ] Stage 8: Scheduling & Autoscaling
-- [ ] Stage 9: Observability
-- [ ] Stage 10: CI/CD & GitOps
-- [ ] Stage 11: Infrastructure as Code
-- [ ] Stage 12: Production Operations
-- [ ] Stage 13: Advanced & Serverless
+| Stage | Status | Started | Completed |
+|-------|--------|---------|-----------|
+| Stage 0: Prerequisites | ⬜ Not started | — | — |
+| Stage 1: Docker & Containers | ⬜ Not started | — | — |
+| Stage 2: Kubernetes Core Concepts | ⬜ Not started | — | — |
+| Stage 3: EKS Cluster Setup | ⬜ Not started | — | — |
+| Stage 4: Workloads & Application Lifecycle | ⬜ Not started | — | — |
+| Stage 5: Networking & Ingress | ⬜ Not started | — | — |
+| Stage 6: Security | ⬜ Not started | — | — |
+| Stage 7: Storage & Stateful Workloads | ⬜ Not started | — | — |
+| Stage 8: Scheduling & Autoscaling | ⬜ Not started | — | — |
+| Stage 9: Observability | ⬜ Not started | — | — |
+| Stage 10: CI/CD & GitOps | ⬜ Not started | — | — |
+| Stage 11: Infrastructure as Code | ⬜ Not started | — | — |
+| Stage 12: Production Operations | ⬜ Not started | — | — |
+| Stage 13: Advanced & Serverless | ⬜ Not started | — | — |
 
 ## Documentation Rules (STRICT)
 
 1. **Verify facts** — before documenting anything technical, look it up on the internet to confirm it's accurate and current (2026).
-2. **Learning journal** — every session, document what was learned, what was attempted, what failed, and what was corrected. File: `docs/journal/learning-journal.md`
+2. **Learning journal** — every session, document what was learned, what was attempted, what failed, and what was corrected.
+   - **Main journal:** `docs/journal/learning-journal.md` — for planning sessions, cross-stage decisions, and meta-progress.
+   - **Per-stage journals:** `docs/journal/stage-{N}-journal.md` (e.g., `stage-0-journal.md`, `stage-1-journal.md`, etc.) — for all learning entries that happen DURING that stage's implementation/labs.
+   - **Rule:** When the learner is actively working on a stage, write entries to that stage's journal file. Create the file on first use. The main journal is for cross-cutting entries only (planning, roadmap changes, stage transitions).
 3. **Timeline format** — entries are chronological with timestamps. Never delete old entries.
 4. **Corrections** — if the learner had a wrong understanding, document:
    - What they thought (the misconception)
@@ -102,7 +107,34 @@ Fargate, EKS Auto Mode, Hybrid Nodes, service mesh, custom operators
    - Why the misconception is wrong
 5. **Document as much as possible** — err on the side of over-documenting. Every insight, every mistake, every fix.
 6. **Append-only** — the journal is a living history. Old entries stay forever.
-7. **Auto-assess every prompt** — for EVERY message the learner sends, assess whether it contains something documentable (a question asked, a concept discussed, a mistake made, a correction given, a decision taken, progress made). If yes, update `docs/journal/learning-journal.md` directly and automatically. Do NOT ask permission — just do it. The learner is relying on this.
+7. **Auto-assess every prompt** — for EVERY message the learner sends, assess whether it contains something documentable (a question asked, a concept discussed, a mistake made, a correction given, a decision taken, progress made). If yes, update the appropriate journal file directly and automatically. Do NOT ask permission — just do it. The learner is relying on this.
+8. **Stage journal structure** — each per-stage journal follows this template:
+   ```
+   # Stage N: [Title] — Learning Journal
+   
+   ## Rules
+   - Same as main journal (timestamped, append-only, corrections documented)
+   
+   ---
+   
+   ## Progress Timeline
+   
+   | Date | What was done | Status |
+   |------|--------------|--------|
+   | YYYY-MM-DD | Completed Lab X.1 | ✅ |
+   | YYYY-MM-DD | Read section on Y | ✅ |
+   | YYYY-MM-DD | Attempted Lab X.2, hit issue with Z | ⚠️ |
+   
+   ---
+   
+   ## Detailed Entries
+   
+   ### YYYY-MM-DD — [Session Topic]
+   ...entries...
+   ```
+   - The **Progress Timeline** table is a quick-glance summary of everything done in that stage — labs completed, sections read, questions answered, issues hit.
+   - The **Detailed Entries** section has the full narrative (what was learned, mistakes, corrections, insights).
+   - Both are append-only. Update the progress table every session.
 
 ## Notes
 
