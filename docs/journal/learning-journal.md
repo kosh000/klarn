@@ -188,3 +188,27 @@ Compared roadmap.sh topics against all 14 stages. Identified 13 missing/underrep
 ---
 
 (Next entries will be added as learning progresses)
+
+### 2026-05-26 — AWS CLI Profile Setup
+
+**Context:** Learner requested a dedicated AWS CLI profile for the project before starting hands-on labs.
+
+**Decision Made:**
+- Profile name: `eks-learning`
+- Region: `ap-south-1` (Mumbai)
+- Output format: `json`
+- All AWS commands in this project must use `--profile eks-learning`
+
+**What was done:**
+- Created steering file `.kiro/steering/00-aws-profile.md` — documents the profile convention, setup instructions, and a rule for Kiro to always include the profile flag in generated commands
+- Added note to master roadmap under "Your Notes"
+- Profile does NOT exist yet on the system — learner needs to create it with `aws configure --profile eks-learning`
+
+**Why this matters:**
+- Keeps EKS learning isolated from any other AWS work
+- Prevents accidental operations against wrong accounts/regions
+- Makes commands reproducible (explicit profile = no ambient credential surprises)
+
+---
+
+(Next entries will be added as learning progresses)

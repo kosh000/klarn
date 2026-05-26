@@ -16,6 +16,7 @@ Learn by doing first, then understanding why. Each stage follows:
 
 | Component | Tool | Why |
 |-----------|------|-----|
+| **AWS Profile** | **`--profile eks-learning`** | **ALL AWS commands use this. Region: ap-south-1, Output: json** |
 | Kubernetes | v1.35 on EKS (upstream at v1.36) | Latest stable on EKS |
 | Cluster creation | eksctl → Terraform | Fast start, then production IaC |
 | Node scaling | Karpenter | Default recommendation, replaces Cluster Autoscaler |
@@ -146,4 +147,4 @@ Fargate, EKS Auto Mode, Hybrid Nodes, service mesh, custom operators
 
 ## Your Notes
 
-(Add anything here as you learn)
+- **AWS CLI Profile**: This project uses `--profile eks-learning` for all AWS commands. Region: `ap-south-1`, output: `json`. See `00-aws-profile.md` steering file for details.
