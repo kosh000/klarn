@@ -8,6 +8,30 @@ description: "Stage 3: EKS Cluster Setup — eksctl, managed nodes, first worklo
 ## Goal
 Create a real EKS cluster on AWS, deploy a workload, and understand everything that was created under the hood.
 
+## Cluster Lifecycle Strategy (Learning)
+
+**Decisions made:**
+- **No NAT Gateway** — nodes in public subnets only (saves ~$33/month)
+- **Scale nodes to 0 when idle** — only control plane charged (~$73/month)
+- **Public subnets for nodes** — less secure but fine for learning, ingress works the same
+- **One cluster, kept alive** — don't destroy/recreate. Scale nodes up/down as needed.
+
+**Cost model:**
+- Active learning: ~$133/month (control plane + 2 nodes)
+- Idle (nodes=0): ~$73/month (control plane only)
+- Destroyed: $0
+
+**Commands:**
+```bash
+# Stop learning for today (keep cluster, remove nodes)
+eksctl scale nodegroup --cluster=eks-learning --name=workers --nodes=0 --nodes-min=0 --profile eks-learning
+
+# Resume learning (bring nodes back)
+eksctl scale nodegroup --cluster=eks-learning --name=workers --nodes=2 --profile eks-learning
+```
+
+**When we have Terraform + ArgoCD (Stages 10-11):** destroy/recreate becomes trivial — one command rebuilds everything from code.
+
 ## What is EKS?
 
 Amazon Elastic Kubernetes Service. AWS manages the control plane (API server, etcd, scheduler, controller manager) for you. You manage (or let AWS manage) the worker nodes.
@@ -62,14 +86,15 @@ aws sts get-caller-identity
 ```bash
 eksctl create cluster \
   --name eks-learning \
-  --region us-east-1 \
+  --region ap-south-1 \
   --version 1.35 \
   --nodegroup-name workers \
   --node-type t3.medium \
   --nodes 2 \
-  --nodes-min 1 \
+  --nodes-min 0 \
   --nodes-max 4 \
-  --managed
+  --managed \
+  --profile eks-learning
 ```
 
 This takes ~15 minutes. It creates:
@@ -89,16 +114,21 @@ kind: ClusterConfig
 
 metadata:
   name: eks-learning
-  region: us-east-1
+  region: ap-south-1
   version: "1.35"
+
+vpc:
+  nat:
+    gateway: Disable  # No NAT — saves ~$33/month
 
 managedNodeGroups:
   - name: workers
     instanceType: t3.medium
     desiredCapacity: 2
-    minSize: 1
+    minSize: 0          # Allows scaling to 0 when idle
     maxSize: 4
-    volumeSize: 30
+    volumeSize: 20
+    privateNetworking: false  # Nodes in public subnets
     ssh:
       allow: true  # Enable SSH for learning (disable in production)
     iam:
@@ -110,7 +140,7 @@ managedNodeGroups:
 ```
 
 ```bash
-eksctl create cluster -f cluster-config.yaml
+eksctl create cluster -f cluster-config.yaml --profile eks-learning
 ```
 
 ## After Cluster Creation

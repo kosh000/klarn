@@ -1,0 +1,18 @@
+application:
+  name: my-app
+  version: "1.0.0"
+  replicas: 3
+  ports:
+    - containerPort: 8080
+      protocol: TCP
+    - containerPort: 9090
+      protocol: TCP
+  environment:
+    - name: DATABASE_URL
+      value: "postgres://localhost:5432/mydb"
+    - name: LOG_LEVEL
+      value: "info"
+  labels:
+    app: my-app
+    tier: backend
+    environment: production

@@ -91,10 +91,10 @@ Fargate, EKS Auto Mode, Hybrid Nodes, service mesh, custom operators
 
 | Stage | Status | Started | Completed |
 |-------|--------|---------|-----------|
-| Stage 0: Prerequisites | 🟡 In progress | 2026-05-26 | — |
-| Stage 1: Docker & Containers | ⬜ Not started | — | — |
-| Stage 2: Kubernetes Core Concepts | ⬜ Not started | — | — |
-| Stage 3: EKS Cluster Setup | ⬜ Not started | — | — |
+| Stage 0: Prerequisites | ✅ Complete | 2026-05-26 | 2026-05-26 |
+| Stage 1: Docker & Containers | ✅ Complete | 2026-05-26 | 2026-05-26 |
+| Stage 2: Kubernetes Core Concepts | ✅ Complete | 2026-05-26 | 2026-05-26 |
+| Stage 3: EKS Cluster Setup | 🟡 In progress | 2026-05-26 | — |
 | Stage 4: Workloads & Application Lifecycle | ⬜ Not started | — | — |
 | Stage 5: Networking & Ingress | ⬜ Not started | — | — |
 | Stage 6: Security | ⬜ Not started | — | — |
