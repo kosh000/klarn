@@ -1,5 +1,6 @@
 ---
-inclusion: manual
+inclusion: auto
+description: "Stage 0: Prerequisites — Linux, networking, YAML, AWS basics (IAM, VPC, EC2)"
 ---
 
 # Stage 0: Prerequisites
