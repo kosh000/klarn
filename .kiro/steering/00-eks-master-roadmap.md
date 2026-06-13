@@ -94,7 +94,7 @@ Fargate, EKS Auto Mode, Hybrid Nodes, service mesh, custom operators
 | Stage 0: Prerequisites | ✅ Complete | 2026-05-26 | 2026-05-26 |
 | Stage 1: Docker & Containers | ✅ Complete | 2026-05-26 | 2026-05-26 |
 | Stage 2: Kubernetes Core Concepts | ✅ Complete | 2026-05-26 | 2026-05-26 |
-| Stage 3: EKS Cluster Setup | 🟡 In progress | 2026-05-26 | — |
+| Stage 3: EKS Cluster Setup | ✅ Complete | 2026-05-26 | 2026-06-13 |
 | Stage 4: Workloads & Application Lifecycle | ⬜ Not started | — | — |
 | Stage 5: Networking & Ingress | ⬜ Not started | — | — |
 | Stage 6: Security | ⬜ Not started | — | — |
@@ -160,6 +160,16 @@ Fargate, EKS Auto Mode, Hybrid Nodes, service mesh, custom operators
 ## Your Notes
 
 - **AWS CLI Profile**: This project uses `--profile eks-learning` for all AWS commands. Region: `ap-south-1`, output: `json`. See `00-aws-profile.md` steering file for details.
+
+## Command History Tracking (STRICT)
+
+**Rule:** At the end of each stage's hands-on segment, Kiro MUST create/update a command log file listing all commands the learner ran during that stage.
+
+- **Location:** `docs/commands/stage-{N}-commands.md`
+- **Format:** Chronological list of commands with brief comments
+- **When:** After a stage segment is complete (or at regular checkpoints)
+- **Source:** Check bash history and conversation context
+- **Clear history:** At the start of each new stage, the old history is captured and a new file begins
 
 ---
 
