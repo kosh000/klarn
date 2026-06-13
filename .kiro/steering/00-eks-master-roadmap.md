@@ -95,7 +95,7 @@ Fargate, EKS Auto Mode, Hybrid Nodes, service mesh, custom operators
 | Stage 1: Docker & Containers | ✅ Complete | 2026-05-26 | 2026-05-26 |
 | Stage 2: Kubernetes Core Concepts | ✅ Complete | 2026-05-26 | 2026-05-26 |
 | Stage 3: EKS Cluster Setup | ✅ Complete | 2026-05-26 | 2026-06-13 |
-| Stage 4: Workloads & Application Lifecycle | ⬜ Not started | — | — |
+| Stage 4: Workloads & Application Lifecycle | 🔄 In progress | 2026-06-13 | — |
 | Stage 5: Networking & Ingress | ⬜ Not started | — | — |
 | Stage 6: Security | ⬜ Not started | — | — |
 | Stage 7: Storage & Stateful Workloads | ⬜ Not started | — | — |
