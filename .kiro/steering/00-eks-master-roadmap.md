@@ -22,6 +22,17 @@ Within each stage, follow this interaction pattern:
 3. **One topic at a time** — present one concept, discuss it, answer questions, then move to the next
 4. **Learner controls pace** — wait for the learner to signal readiness before advancing to the next topic
 5. **No skipping ahead** — do not jump to labs or later topics until the current concept is understood
+6. **Never suggest skipping** — do not offer to skip topics or jump ahead. We follow the sequence. Always present the next topic in order without offering alternatives like "or we can skip to X"
+7. **Quick verification allowed** — if the learner wants to try something during concepts (before labs), allow it. The rule is: don't formally start labs until concepts are done, but quick hands-on checks during discussion are fine.
+
+## Teaching & Lab Rules
+
+1. **Verify kubectl commands before suggesting** — flags get deprecated across versions. Notable removals: `--limits`, `--requests`, `--record` from `kubectl run`. When in doubt, use YAML manifests instead of complex CLI flags.
+2. **Labs produce YAML files** — lab exercises should produce manifests in `exec_{stage_number}/labs/` rather than relying on imperative kubectl flags. Learner creates, reviews, and applies files. Matches production practice (declarative).
+3. **Shell quoting in YAML** — in YAML commands that need shell variable expansion (`$(date)`, `$VAR`), ensure the command uses double quotes or is wrapped in `sh -c "..."`. Single quotes prevent expansion.
+4. **Self-test format** — present all questions → learner answers → score with corrections and explanations → present round 2 with rephrased versions of missed/partial questions only → confirm understanding.
+5. **Cost awareness** — at session breaks, remind about cost-saving actions (scale nodegroup to 0, delete LoadBalancer services). At session end, note the resume commands in the journal.
+6. **Cheatsheet generation** — when a stage is closed, generate a cheatsheet at `docs/reference/stage-{N}-cheatsheet.md` covering all terms, commands, gotchas, and learner-caught insights from that stage.
 
 ## Current Stack (2026)
 
@@ -95,7 +106,7 @@ Fargate, EKS Auto Mode, Hybrid Nodes, service mesh, custom operators
 | Stage 1: Docker & Containers | ✅ Complete | 2026-05-26 | 2026-05-26 |
 | Stage 2: Kubernetes Core Concepts | ✅ Complete | 2026-05-26 | 2026-05-26 |
 | Stage 3: EKS Cluster Setup | ✅ Complete | 2026-05-26 | 2026-06-13 |
-| Stage 4: Workloads & Application Lifecycle | 🔄 In progress | 2026-06-13 | — |
+| Stage 4: Workloads & Application Lifecycle | ✅ Complete | 2026-06-13 | 2026-06-21 |
 | Stage 5: Networking & Ingress | ⬜ Not started | — | — |
 | Stage 6: Security | ⬜ Not started | — | — |
 | Stage 7: Storage & Stateful Workloads | ⬜ Not started | — | — |
@@ -120,6 +131,7 @@ Fargate, EKS Auto Mode, Hybrid Nodes, service mesh, custom operators
    - Why the misconception is wrong
 5. **Document as much as possible** — err on the side of over-documenting. Every insight, every mistake, every fix.
 6. **Append-only** — the journal is a living history. Old entries stay forever.
+7. **Never trim steering or referenced files** — all referenced files (journals, cheatsheets, resources) are permanent records. Never consolidate, summarize, or trim them. If context gets too large for a chat, gather context and start a new chat instead.
 7. **Auto-assess every prompt** — for EVERY message the learner sends, assess whether it contains something documentable (a question asked, a concept discussed, a mistake made, a correction given, a decision taken, progress made). If yes, update the appropriate journal file directly and automatically. Do NOT ask permission — just do it. The learner is relying on this.
 8. **Stage journal structure** — each per-stage journal follows this template:
    ```
@@ -177,3 +189,4 @@ Fargate, EKS Auto Mode, Hybrid Nodes, service mesh, custom operators
 
 #[[file:docs/journal/learning-journal.md]]
 #[[file:docs/reference/00-learning-resources.md]]
+#[[file:docs/reference/stage-4-cheatsheet.md]]
